@@ -1,0 +1,33 @@
+# WP Poster Bot — systemd service
+# 安裝方式:
+#   sudo cp wp_poster.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable wp-poster
+#   sudo systemctl start wp-poster
+#
+# 請根據實際路徑修改 User、WorkingDirectory、ExecStart
+
+[Unit]
+Description=WordPress Auto Poster Bot (PTT → Novel → WP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=yui
+Group=yui
+WorkingDirectory=/Users/yui/huahwa-bot
+ExecStart=/usr/bin/python3 /Users/yui/huahwa-bot/wp_poster.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+EnvironmentFile=/Users/yui/huahwa-bot/.env
+
+# Safety
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
