@@ -113,6 +113,10 @@ def main():
             log.warning(f"完結篇內容過短（{len(ending) if ending else 0} 字），跳過: {title}")
             continue
 
+        # 確保結尾有完結標記（供去重偵測用）
+        if not any(m in ending[-50:] for m in ["（完）", "（全文完）", "—完—"]):
+            ending = ending.rstrip() + "\n\n（完）"
+
         # 寫入 DB
         source_id = series["source_id"]
         conn.execute(
