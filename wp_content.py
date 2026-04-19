@@ -21,7 +21,7 @@ GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 # OpenRouter fallback（多模型可選）
 OPENROUTER_KEY = os.getenv("OPENROUTER_KEY", "")
-OPENROUTER_MODELS = ["deepseek/deepseek-chat-v3-0324:free", "meta-llama/llama-3.3-70b-instruct:free"]
+OPENROUTER_MODELS = ["qwen/qwen3-next-80b-a3b-instruct:free", "meta-llama/llama-3.3-70b-instruct:free"]
 
 SYSTEM_PROMPT = (
     "你是一位全能型網路小說家，精通情感糾葛、職場暗鬥、家庭倫理、禁忌慾望等多種題材。\n"

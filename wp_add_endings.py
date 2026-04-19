@@ -89,18 +89,22 @@ def main():
 
     generator = ContentGenerator(api_key=api_key)
 
-    # WordPress publisher
+    # WordPress publisher (access_token 或 OAuth2 credentials 皆可)
     wp = None
     wp_site = os.getenv("WP_SITE_URL", "")
     wp_token = os.getenv("WP_ACCESS_TOKEN", "")
-    if wp_site and wp_token:
+    wp_client_id = os.getenv("WP_CLIENT_ID", "")
+    wp_has_oauth = all([wp_client_id, os.getenv("WP_CLIENT_SECRET", ""),
+                        os.getenv("WP_USERNAME", ""), os.getenv("WP_PASSWORD", "")])
+    if wp_site and (wp_token or wp_has_oauth):
         wp = WordPressPublisher(
             site_url=wp_site, access_token=wp_token,
-            client_id=os.getenv("WP_CLIENT_ID", ""),
+            client_id=wp_client_id,
             client_secret=os.getenv("WP_CLIENT_SECRET", ""),
             username=os.getenv("WP_USERNAME", ""),
             password=os.getenv("WP_PASSWORD", ""),
         )
+        log.info("WordPress publisher 已初始化" + (" (OAuth2)" if not wp_token else ""))
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row

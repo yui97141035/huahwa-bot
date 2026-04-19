@@ -72,8 +72,8 @@ class Config:
     DISCORD_TOKEN = os.getenv("DISCORD_TOKEN", "")
     DISCORD_OWNER_ID = os.getenv("DISCORD_OWNER_ID", "")
 
-    # Gemini
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    # Gemini（優先用 WP 專用 key，沒設就 fallback 共用 key）
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY_WP") or os.getenv("GEMINI_API_KEY", "")
 
     @classmethod
     def validate(cls):
