@@ -1,16 +1,27 @@
 """
-wp_content.py — Gemini AI 改寫引擎
+wp_content.py — AI 改寫引擎（Gemini + Groq + OpenRouter fallback）
 將 PTT 真實故事改寫為虛構小說連載。
 """
 
+import os
 import re
+import json
 import logging
+import requests
 from google import genai
 from google.genai import types
 
 log = logging.getLogger("wp-poster.content")
 
 GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+
+# Groq fallback（Llama 系列，免費額度大）
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+
+# OpenRouter fallback（多模型可選）
+OPENROUTER_KEY = os.getenv("OPENROUTER_KEY", "")
+OPENROUTER_MODELS = ["deepseek/deepseek-chat-v3-0324:free", "meta-llama/llama-3.3-70b-instruct:free"]
 
 SYSTEM_PROMPT = (
     "你是一位全能型網路小說家，精通情感糾葛、職場暗鬥、家庭倫理、禁忌慾望等多種題材。\n"
@@ -112,28 +123,113 @@ class ContentGenerator:
         response_text = self._call_gemini(config, prompt)
         return self._parse_response(response_text)
 
-    def _call_gemini(self, config, contents: str) -> str:
-        """嘗試所有 Gemini 模型，配額滿自動降級。"""
+    def _call_ai(self, system_prompt: str, user_prompt: str,
+                 temperature: float = 0.9, max_tokens: int = 8192) -> str:
+        """嘗試 Gemini → Groq → OpenRouter，全部 429 才拋錯。"""
+        # 1. Gemini
+        gemini_err = self._try_gemini(system_prompt, user_prompt, temperature, max_tokens)
+        if isinstance(gemini_err, str):
+            return gemini_err  # 成功
+
+        # 2. Groq
+        if GROQ_API_KEY:
+            groq_result = self._try_openai_compat(
+                "https://api.groq.com/openai/v1/chat/completions",
+                GROQ_API_KEY, GROQ_MODELS,
+                system_prompt, user_prompt, temperature, max_tokens, "Groq",
+            )
+            if groq_result:
+                return groq_result
+
+        # 3. OpenRouter
+        if OPENROUTER_KEY:
+            or_result = self._try_openai_compat(
+                "https://openrouter.ai/api/v1/chat/completions",
+                OPENROUTER_KEY, OPENROUTER_MODELS,
+                system_prompt, user_prompt, temperature, max_tokens, "OpenRouter",
+            )
+            if or_result:
+                return or_result
+
+        raise gemini_err  # 全部失敗，拋 Gemini 的原始錯誤
+
+    def _try_gemini(self, system_prompt, user_prompt, temperature, max_tokens):
+        """嘗試所有 Gemini 模型。成功回傳 str，失敗回傳 Exception。"""
         last_err = None
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+        )
         for model_name in GEMINI_MODELS:
             try:
                 resp = self.client.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                    config=config,
+                    model=model_name, contents=user_prompt, config=config,
                 )
                 result = resp.text
                 if not result:
-                    raise ValueError(f"Gemini {model_name} 回傳空內容（可能被 safety filter 攔截）")
+                    raise ValueError(f"Gemini {model_name} 回傳空內容")
+                log.info(f"[Gemini {model_name}] 成功，{len(result)} 字")
                 return result.strip()
             except Exception as e:
                 last_err = e
                 err_str = str(e)
                 if "429" in err_str or "quota" in err_str.lower():
-                    log.warning(f"Gemini {model_name} 配額超限，嘗試下一個模型")
+                    log.warning(f"Gemini {model_name} 配額超限，嘗試下一個")
                     continue
                 raise
-        raise last_err
+        log.warning(f"Gemini 全部 429，嘗試 fallback")
+        return last_err
+
+    @staticmethod
+    def _try_openai_compat(url, api_key, models, system_prompt, user_prompt,
+                           temperature, max_tokens, provider_name):
+        """呼叫 OpenAI 相容 API（Groq / OpenRouter）。成功回傳 str，失敗回傳 None。"""
+        for model in models:
+            try:
+                resp = requests.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "temperature": temperature,
+                        "max_tokens": min(max_tokens, 4096),
+                    },
+                    timeout=120,
+                )
+                if resp.status_code == 429:
+                    log.warning(f"[{provider_name} {model}] 429 限流，嘗試下一個")
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                text = data["choices"][0]["message"]["content"].strip()
+                if not text:
+                    log.warning(f"[{provider_name} {model}] 回傳空內容")
+                    continue
+                log.info(f"[{provider_name} {model}] 成功，{len(text)} 字")
+                return text
+            except Exception as e:
+                log.warning(f"[{provider_name} {model}] 失敗: {e}")
+                continue
+        return None
+
+    def _call_gemini(self, config, contents: str) -> str:
+        """向後相容：舊的呼叫介面。"""
+        system_prompt = ""
+        if hasattr(config, "system_instruction") and config.system_instruction:
+            system_prompt = config.system_instruction
+        return self._call_ai(
+            system_prompt, contents,
+            temperature=getattr(config, "temperature", 0.9),
+            max_tokens=getattr(config, "max_output_tokens", 8192),
+        )
 
     @staticmethod
     def _parse_response(text: str) -> dict:
