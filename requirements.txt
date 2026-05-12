@@ -1,0 +1,20 @@
+discord.py>=2.3
+yfinance>=0.2
+numpy<2
+pandas>=2.0
+torch>=2.0
+matplotlib>=3.7
+python-dotenv>=1.0
+google-genai>=1.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+alpaca-py>=0.21.0
+# --- Phase 1 optional dependencies (graceful fallback if missing) ---
+pandas-ta>=0.3.14b1; python_version>="3.12"  # Python 3.12+ only
+neuralforecast>=1.7    # Phase 1C: N-HiTS ensemble
+transformers>=4.36     # Phase 1D: FinBERT sentiment
+sentencepiece>=0.1.99  # Phase 1D: FinBERT tokenizer
+quantstats>=0.0.62     # Phase 1E: performance report
+# --- Phase 2: Triple Verification Gates (graceful fallback if missing) ---
+scikit-learn>=1.3      # Phase 2: ML utilities
+lightgbm>=4.0          # Phase 2: Gate 2 direction classifier
