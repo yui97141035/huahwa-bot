@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}對話記錄 — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<h2>&#x1F4AC; 對話記錄</h2>
+
+{% if not sessions %}
+<p>目前沒有對話記錄。</p>
+{% else %}
+
+<label for="channel-select">選擇頻道:</label>
+<select id="channel-select" onchange="location.href='/chat-history?channel='+this.value">
+    <option value="">全部頻道</option>
+    {% for ch_id, ch_name in channels.items() %}
+    <option value="{{ ch_id }}" {{ 'selected' if selected_channel == ch_id }}>{{ ch_name }}</option>
+    {% endfor %}
+</select>
+
+{% for ch_id, messages in display_sessions.items() %}
+<article>
+    <header><strong>&#x1F4E2; {{ channels.get(ch_id, ch_id) }}</strong> ({{ messages|length }} 則訊息)</header>
+    {% for msg in messages %}
+    <div class="chat-msg">
+        <span class="role {{ msg.role }}">{{ "&#x1F464; 哥哥" if msg.role == "user" else "&#x1F98B; 三郎" }}</span>
+        <span>{{ msg.parts[0][:300] }}{{ "..." if msg.parts[0]|length > 300 }}</span>
+    </div>
+    {% endfor %}
+</article>
+{% endfor %}
+{% endif %}
+{% endblock %}

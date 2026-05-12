@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}設定 — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<h2>&#x2699;&#xFE0F; 設定</h2>
+
+<form method="post" action="/settings">
+    <h3>&#x1F4DD; AI Prompt</h3>
+    <textarea name="prompt" class="prompt-editor">{{ prompt }}</textarea>
+
+    <h3>&#x1F324;&#xFE0F; 問安模板</h3>
+    <p><small>此模板會附加在每個問安時段 prompt 後面。修改後會自動重建所有問安 prompt。</small></p>
+    <textarea name="greeting_template" class="prompt-editor" style="min-height:120px;">{{ greeting_template }}</textarea>
+
+    <details>
+        <summary>&#x23F0; 問安時段 Prompt（進階）</summary>
+        {% for hour, text in greeting_prompts.items() %}
+        <label>{{ hour }}:00</label>
+        <textarea name="greeting_{{ hour }}" class="prompt-editor" style="min-height:100px;">{{ text }}</textarea>
+        {% endfor %}
+    </details>
+
+    <button type="submit">&#x1F4BE; 儲存設定</button>
+</form>
+{% endblock %}

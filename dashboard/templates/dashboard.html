@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}總覽 — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<h2>&#x1F3E0; 總覽</h2>
+
+<div class="grid">
+    <article>
+        <header><strong>&#x1F916; Bot 狀態</strong></header>
+        <p>
+            <span class="status-dot {{ 'on' if bot_ready else 'off' }}"></span>
+            {{ "已上線" if bot_ready else "離線" }}
+        </p>
+        <p>伺服器數: <strong>{{ guild_count }}</strong></p>
+    </article>
+
+    <article>
+        <header><strong>&#x1F4C8; 市場狀態</strong></header>
+        <p>
+            台股: <span class="status-dot {{ 'on' if tw_active else 'off' }}"></span>{{ "開市中" if tw_active else "休市" }}<br>
+            美股: <span class="status-dot {{ 'on' if us_active else 'off' }}"></span>{{ "開市中" if us_active else "休市" }}
+        </p>
+    </article>
+
+    <article>
+        <header><strong>&#x1F50D; 監控狀態</strong></header>
+        <p>
+            <span class="status-dot {{ 'on' if monitor_enabled else 'off' }}"></span>
+            {{ "監控中" if monitor_enabled else "未啟動" }}
+        </p>
+        <p>監控股數: <strong>{{ watchlist_count }}</strong></p>
+        <form method="post" action="/api/monitor/toggle" style="margin-top:0.5em;">
+            <button type="submit" class="{{ 'secondary' if monitor_enabled else '' }}">
+                {{ "停止監控" if monitor_enabled else "啟動監控" }}
+            </button>
+        </form>
+    </article>
+</div>
+
+<h3>&#x1F514; 最近提醒</h3>
+<div id="alert-list" hx-get="/api/partials/alerts" hx-trigger="load" hx-swap="innerHTML">
+    <p aria-busy="true">載入中...</p>
+</div>
+{% endblock %}

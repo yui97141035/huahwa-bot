@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Arena — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<h2>&#x2694;&#xFE0F; Arena &#x2014; &#x5C0D;&#x6297;&#x5F0F;&#x4EA4;&#x6613;</h2>
+
+{# --- Bot Cards --- #}
+<div class="grid">
+{% for b in bots %}
+    <article>
+        <header>
+            {% if b.status == 'champion' %}&#x1F451;{% elif b.status == 'eliminated' %}&#x1F480;{% else %}&#x1F7E2;{% endif %}
+            <strong>{{ b.name }}</strong>
+            <small>({{ b.bot_id }})</small>
+        </header>
+        <p>
+            Status: <strong>{{ b.status }}</strong><br>
+            Equity: <strong>${{ "%.2f"|format(b.equity) }}</strong>
+            (Cash: ${{ "%.2f"|format(b.cash) }})<br>
+            Positions: {{ b.positions }} | Days: {{ b.trading_days }}
+        </p>
+        {% set m = b.metrics %}
+        <table>
+            <tr><td>Return</td><td><strong>{{ "%.2f"|format(m.total_return_pct or 0) }}%</strong></td></tr>
+            <tr><td>Win Rate</td><td>{{ "%.1f"|format(m.win_rate or 0) }}%</td></tr>
+            <tr><td>Sharpe</td><td>{{ "%.2f"|format(m.sharpe_ratio or 0) }}</td></tr>
+            <tr><td>Max DD</td><td>{{ "%.2f"|format(m.max_drawdown or 0) }}%</td></tr>
+            <tr><td>Profit Factor</td><td>{{ "%.2f"|format(m.profit_factor or 0) }}</td></tr>
+            <tr><td>Trades</td><td>{{ m.total_trades or 0 }} (W:{{ m.winning_trades or 0 }} L:{{ m.losing_trades or 0 }})</td></tr>
+        </table>
+    </article>
+{% endfor %}
+</div>
+
+{# --- Equity Chart --- #}
+<h3>&#x1F4C8; &#x6B0A;&#x76CA;&#x66F2;&#x7DDA;</h3>
+<div id="equity-chart" hx-get="/api/arena/chart" hx-trigger="load" hx-swap="innerHTML">
+    <p aria-busy="true">&#x8F09;&#x5165;&#x4E2D;...</p>
+</div>
+
+{# --- Recent Trades --- #}
+<h3>&#x1F4DD; &#x6700;&#x8FD1;&#x4EA4;&#x6613;</h3>
+{% if trades %}
+<div style="overflow-x:auto;">
+<table>
+    <thead>
+        <tr>
+            <th>Bot</th>
+            <th>Side</th>
+            <th>Ticker</th>
+            <th>Shares</th>
+            <th>Price</th>
+            <th>PnL</th>
+            <th>Reason</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for t in trades %}
+        <tr>
+            <td>{{ t.bot_id }}</td>
+            <td>{% if t.side == 'buy' %}&#x1F7E2;{% else %}&#x1F534;{% endif %} {{ t.side|upper }}</td>
+            <td><strong>{{ t.ticker }}</strong></td>
+            <td>{{ "%.4f"|format(t.shares) }}</td>
+            <td>${{ "%.2f"|format(t.price) }}</td>
+            <td>{% if t.pnl is not none %}${{ "%.2f"|format(t.pnl) }}{% else %}&mdash;{% endif %}</td>
+            <td><small>{{ (t.reason or '')[:50] }}</small></td>
+            <td><small>{{ (t.executed_at or '')[:16] }}</small></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>&#x5C1A;&#x7121;&#x4EA4;&#x6613;&#x7D00;&#x9304;&#x3002;</p>
+{% endif %}
+
+{# --- Risk Events --- #}
+{% if risk_events %}
+<h3>&#x26A0;&#xFE0F; &#x98A8;&#x63A7;&#x4E8B;&#x4EF6;</h3>
+<table>
+    <thead><tr><th>Bot</th><th>Event</th><th>Detail</th><th>Time</th></tr></thead>
+    <tbody>
+    {% for e in risk_events %}
+    <tr>
+        <td>{{ e.bot_id }}</td>
+        <td>{{ e.event }}</td>
+        <td><small>{{ (e.detail or '')[:80] }}</small></td>
+        <td><small>{{ (e.created_at or '')[:16] }}</small></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

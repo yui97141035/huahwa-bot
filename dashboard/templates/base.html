@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}OpenClaw Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><a href="/" class="brand">&#x1F99E; OpenClaw</a></li>
+        </ul>
+        <ul>
+            {% if user %}
+            <li><a href="/">&#x1F3E0; 總覽</a></li>
+            <li><a href="/watchlist">&#x1F4CA; 監控清單</a></li>
+            <li><a href="/settings">&#x2699;&#xFE0F; 設定</a></li>
+            <li><a href="/chat-history">&#x1F4AC; 對話記錄</a></li>
+            <li><a href="/arena">&#x2694;&#xFE0F; Arena</a></li>
+            <li><a href="/auth/logout">{{ user.name }} &#x1F6AA;</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    <main class="container">
+        {% if flash_msg %}
+        <div class="flash {% if flash_error %}error{% endif %}">{{ flash_msg }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="container">
+        <small>OpenClaw Dashboard &mdash; &#x1F99E; 小龍蝦管理面板</small>
+    </footer>
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+[Unit]
+Description=OpenClaw Discord Bot + Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+WorkingDirectory=__DIR__
+ExecStart=__DIR__/venv/bin/python3 __DIR__/bot.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+EnvironmentFile=__DIR__/.env
+
+# Safety
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

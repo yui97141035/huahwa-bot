@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}登入 — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<div class="login-container">
+    <article>
+        <header>
+            <h2>&#x1F99E; OpenClaw Dashboard</h2>
+            <p>登入管理面板</p>
+        </header>
+
+        {% if error %}
+        <p style="color:var(--pico-color-red-500, #c62828);margin-bottom:1em;">{{ error }}</p>
+        {% endif %}
+
+        {# Password login form #}
+        {% if password_enabled %}
+        <form method="POST" action="/auth/password">
+            <label for="password">管理密碼</label>
+            <input type="password" id="password" name="password" placeholder="輸入 Dashboard 密碼" required autofocus>
+            <button type="submit">&#x1F510; 登入</button>
+        </form>
+        {% endif %}
+
+        {# Discord OAuth2 login #}
+        {% if oauth_enabled %}
+        {% if password_enabled %}<hr><small>或</small>{% endif %}
+        <a href="{{ oauth_url }}" role="button" class="secondary">&#x1F4AC; 使用 Discord 登入</a>
+        {% endif %}
+
+        {% if not password_enabled and not oauth_enabled %}
+        <p>未設定任何登入方式。請在 <code>.env</code> 中設定 <code>DASHBOARD_PASSWORD</code> 或 Discord OAuth2。</p>
+        {% endif %}
+    </article>
+</div>
+{% endblock %}

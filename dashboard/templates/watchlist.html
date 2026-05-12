@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}監控清單 — OpenClaw Dashboard{% endblock %}
+{% block content %}
+<h2>&#x1F4CA; 監控清單</h2>
+
+<form hx-post="/api/watchlist/add" hx-target="#score-table" hx-swap="innerHTML" hx-indicator="#add-spinner">
+    <fieldset role="group">
+        <input type="text" name="ticker" placeholder="輸入股票代碼 (例: AAPL, 2330, IONQ)" required>
+        <button type="submit">新增</button>
+    </fieldset>
+    <span id="add-spinner" class="htmx-indicator" aria-busy="true">處理中...</span>
+</form>
+
+<div id="score-table"
+     hx-get="/api/partials/scores"
+     hx-trigger="load, refresh"
+     hx-swap="innerHTML">
+    <p aria-busy="true">載入評分中...</p>
+</div>
+{% endblock %}

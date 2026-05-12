@@ -1,0 +1,110 @@
+/* OpenClaw Dashboard — custom overrides for Pico CSS */
+
+:root {
+    --oc-red: #e74c3c;
+    --oc-green: #2ecc71;
+    --oc-yellow: #f39c12;
+    --oc-blue: #3498db;
+    --oc-accent: #ff4500;
+}
+
+/* Nav brand */
+nav .brand {
+    font-weight: 700;
+    font-size: 1.15rem;
+    text-decoration: none;
+}
+
+/* Score badge */
+.score-badge {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #fff;
+}
+.score-badge.strong-buy { background: var(--oc-accent); }
+.score-badge.buy        { background: var(--oc-green); }
+.score-badge.hold       { background: var(--oc-yellow); color: #333; }
+.score-badge.weak       { background: var(--oc-red); }
+
+/* TA confidence badge */
+.ta-badge {
+    display: inline-block;
+    padding: 0.15em 0.45em;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.85em;
+    background: var(--oc-blue);
+    color: #fff;
+    opacity: 0.85;
+}
+
+/* Status dot */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.3em;
+}
+.status-dot.on  { background: var(--oc-green); }
+.status-dot.off { background: var(--oc-red); }
+
+/* Chat history messages */
+.chat-msg {
+    padding: 0.5em 0;
+    border-bottom: 1px solid var(--pico-muted-border-color, #ddd);
+}
+.chat-msg .role {
+    font-weight: 600;
+    margin-right: 0.5em;
+}
+.chat-msg .role.user  { color: var(--oc-blue); }
+.chat-msg .role.model { color: var(--oc-accent); }
+
+/* HTMX loading indicator */
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+/* Stock table */
+table.stock-table {
+    font-size: 0.92em;
+}
+table.stock-table td, table.stock-table th {
+    padding: 0.4em 0.6em;
+}
+
+/* Login page centering */
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    text-align: center;
+}
+
+/* Settings textarea */
+textarea.prompt-editor {
+    font-family: monospace;
+    font-size: 0.85em;
+    min-height: 200px;
+}
+
+/* Flash message */
+.flash {
+    padding: 0.75em 1em;
+    border-radius: 4px;
+    margin-bottom: 1em;
+    background: var(--pico-ins-color, #d4edda);
+}
+.flash.error {
+    background: #f8d7da;
+    color: #721c24;
+}

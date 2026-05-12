@@ -1,5 +1,8 @@
-# Secrets
+# Secrets & certificates
 .env
+*.p12
+*.pem
+*.key
 
 # Python
 __pycache__/
@@ -16,6 +19,17 @@ predictions_log.csv
 *.db-shm
 *.db-wal
 *.log
+*.pid
+*.gz
+
+# Binary wheels
+*.whl
+
+# Working directories
+video_workspace/
+
+# Simulation config (may contain credentials)
+config.simulation.ini
 
 # OS
 .DS_Store

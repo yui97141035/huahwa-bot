@@ -1,0 +1,28 @@
+{% if alerts %}
+<table class="stock-table">
+    <thead>
+        <tr>
+            <th>股票</th>
+            <th>評分</th>
+            <th>等級</th>
+            <th>時間</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ticker, info in alerts.items() %}
+        <tr>
+            <td><code>{{ ticker }}</code></td>
+            <td>
+                <span class="score-badge {{ 'strong-buy' if info.score >= 75 else 'buy' }}">
+                    {{ info.score }}
+                </span>
+            </td>
+            <td>{{ info.level }}</td>
+            <td><small>{{ info.time_str }}</small></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>尚無提醒紀錄。</p>
+{% endif %}

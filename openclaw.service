@@ -1,0 +1,33 @@
+# OpenClaw Discord Bot — systemd service
+# 安裝方式:
+#   sudo cp openclaw.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable openclaw
+#   sudo systemctl start openclaw
+#
+# 請根據實際路徑修改 User、WorkingDirectory、ExecStart
+
+[Unit]
+Description=OpenClaw Discord Bot + Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=yui
+Group=yui
+WorkingDirectory=/Users/yui/huahwa-bot
+ExecStart=/usr/bin/python3 /Users/yui/huahwa-bot/bot.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+EnvironmentFile=/Users/yui/huahwa-bot/.env
+
+# Safety
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

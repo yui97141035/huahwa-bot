@@ -1,0 +1,56 @@
+{% if error_msg %}
+<p style="color:var(--oc-red);">{{ error_msg }}</p>
+{% endif %}
+{% if success_msg %}
+<p style="color:var(--oc-green);">{{ success_msg }}</p>
+{% endif %}
+
+<table class="stock-table">
+    <thead>
+        <tr>
+            <th>名稱</th>
+            <th>代碼</th>
+            <th>現價</th>
+            <th>漲跌%</th>
+            <th>評分</th>
+            <th>TA</th>
+            <th>建議</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in stocks %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td><code>{{ item.ticker }}</code></td>
+            {% if item.error %}
+            <td colspan="5" style="color:var(--oc-red);">{{ item.error }}</td>
+            {% else %}
+            <td>${{ "%.2f"|format(item.current) }}</td>
+            <td style="color:{{ 'var(--oc-green)' if item.change_pct >= 0 else 'var(--oc-red)' }}">
+                {{ "%+.2f"|format(item.change_pct) }}%
+            </td>
+            <td>
+                <span class="score-badge {{ item.score_class }}">{{ item.total_score }}/100</span>
+            </td>
+            <td>
+                <span class="ta-badge" title="進階技術分析信心">{{ item.ta_confidence|default(0) }}/{{ item.ta_confidence_max|default(40) }}</span>
+            </td>
+            <td>{{ item.verdict }}</td>
+            {% endif %}
+            <td>
+                <button class="secondary outline"
+                        hx-post="/api/watchlist/remove"
+                        hx-vals='{"ticker": "{{ item.ticker }}"}'
+                        hx-target="#score-table"
+                        hx-swap="innerHTML"
+                        hx-confirm="確定要移除 {{ item.name }} 嗎？"
+                        style="padding:0.2em 0.6em;font-size:0.8em;">
+                    移除
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<small>共 {{ stocks|length }} 檔 | <span aria-busy="true" class="htmx-indicator"></span> 每 60 秒自動更新</small>
