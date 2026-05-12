@@ -15,13 +15,23 @@ import pandas as pd
 
 _log = logging.getLogger("openclaw.signal_gate")
 
-# LightGBM graceful fallback
-_HAS_LIGHTGBM = False
-try:
-    import lightgbm as lgb
-    _HAS_LIGHTGBM = True
-except ImportError:
-    _log.warning("signal_gate: lightgbm not installed, Gate 2 will auto-pass")
+# LightGBM lazy import（避免模組層級載入 C lib 導致 segfault）
+_HAS_LIGHTGBM = None  # None = 尚未嘗試, True/False = 結果
+lgb = None
+
+def _ensure_lightgbm():
+    global _HAS_LIGHTGBM, lgb
+    if _HAS_LIGHTGBM is not None:
+        return _HAS_LIGHTGBM
+    try:
+        import lightgbm as _lgb
+        lgb = _lgb
+        _HAS_LIGHTGBM = True
+        _log.info("signal_gate: lightgbm loaded OK")
+    except ImportError:
+        _HAS_LIGHTGBM = False
+        _log.warning("signal_gate: lightgbm not installed, Gate 2 will auto-pass")
+    return _HAS_LIGHTGBM
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +190,7 @@ def _train_predict_lgbm(featured_df: pd.DataFrame, train_window: int,
     使用最後 train_window 天訓練，預測最後一天。
     Returns: (probability, details_string)
     """
-    if not _HAS_LIGHTGBM:
+    if not _ensure_lightgbm():
         return None, "LightGBM not available"
 
     df = _prepare_ml_features(featured_df)
@@ -235,9 +245,16 @@ def _train_predict_lgbm(featured_df: pd.DataFrame, train_window: int,
         return None, f"LightGBM error: {e}"
 
 
-def gate_ml_direction(analysis: dict, ticker: str) -> GateResult:
-    """LightGBM 預測未來 5 天方向。"""
+def gate_ml_direction(analysis: dict, ticker: str, *, allow_training: bool = False) -> GateResult:
+    """LightGBM 預測未來 5 天方向。
+
+    allow_training: True 時才真正訓練 LightGBM（回測用）。
+                    False 時 Gate 2 自動通過（生產環境，避免 segfault）。
+    """
     from prediction_config import GATE2_PROBABILITY_THRESHOLD, GATE2_TRAIN_WINDOW, GATE2_FORWARD_DAYS
+
+    if not allow_training:
+        return GateResult(passed=True, score=0.5, details="live mode (auto-pass, Gate 1+3 only)")
 
     featured_df = analysis.get("_featured_df")
     if featured_df is None:

@@ -176,15 +176,24 @@ class TestGateMLDirection:
         assert result.passed is True
         assert "auto-pass" in result.details
 
+    def test_live_mode_autopass(self):
+        """In live mode (default), Gate 2 should auto-pass."""
+        from signal_gate import gate_ml_direction
+        featured = _make_featured_df(n=200)
+        analysis = _make_analysis(featured_df=featured)
+        result = gate_ml_direction(analysis, "2330.TW")
+        assert result.passed is True
+        assert "auto-pass" in result.details
+
     def test_lgbm_fallback_when_not_installed(self):
-        """When lightgbm not available, Gate 2 should auto-pass."""
+        """When allow_training=True but lightgbm unavailable, Gate 2 should auto-pass."""
         import signal_gate
         original = signal_gate._HAS_LIGHTGBM
         try:
             signal_gate._HAS_LIGHTGBM = False
             featured = _make_featured_df(n=200)
             analysis = _make_analysis(featured_df=featured)
-            result = signal_gate.gate_ml_direction(analysis, "2330.TW")
+            result = signal_gate.gate_ml_direction(analysis, "2330.TW", allow_training=True)
             assert result.passed is True
             assert "fallback" in result.details
         finally:
@@ -195,7 +204,7 @@ class TestGateMLDirection:
         # Only 50 rows, not enough for train_window=120
         featured = _make_featured_df(n=50)
         analysis = _make_analysis(featured_df=featured)
-        result = gate_ml_direction(analysis, "AAPL")
+        result = gate_ml_direction(analysis, "AAPL", allow_training=True)
         assert result.passed is True
         assert "fallback" in result.details or "insufficient" in result.details
 

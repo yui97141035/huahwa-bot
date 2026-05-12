@@ -963,13 +963,16 @@ async def monitor_loop():
         vol_ratio = analysis["vol_ratio"]
         swing_pcts.append(change_pct)
 
-        # 三驗證進場評估
+        # 三驗證進場評估（在 executor 跑，避免 C lib 與 asyncio 衝突）
         entry_signal = None
         try:
             from signal_gate import evaluate_entry
-            entry_signal = evaluate_entry(
-                analysis, item["ticker"],
-                vix=vix_value, sentiment=sentiment_data,
+            entry_signal = await loop.run_in_executor(
+                None,
+                functools.partial(
+                    evaluate_entry, analysis, item["ticker"],
+                    vix=vix_value, sentiment=sentiment_data,
+                ),
             )
             log.info(
                 f"monitor_loop: {item['ticker']} gate={entry_signal.confidence} "
