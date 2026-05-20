@@ -27,6 +27,9 @@ _INITIAL_WATCHLIST: list[dict] = [
     {"input": "QBTS",   "ticker": "QBTS",     "name": "D-Wave Quantum"},
     {"input": "QUBT",   "ticker": "QUBT",     "name": "Quantum Computing"},
     {"input": "QMCO",   "ticker": "QMCO",     "name": "Quantum Corp"},
+    {"input": "2467",   "ticker": "2467.TW",  "name": "志聖工業"},
+    {"input": "5443",   "ticker": "5443.TWO", "name": "均豪精密"},
+    {"input": "6640",   "ticker": "6640.TWO", "name": "均華精密"},
 ]
 
 _STATE_PATH = Path("watchlist.json")
@@ -56,6 +59,22 @@ def _load_state() -> dict:
         if state is None:
             state = {"enabled": False, "channel_id": None, "chat_channel_id": None, "cooldowns": {},
                      "watchlist": list(_INITIAL_WATCHLIST)}
+
+        # 自動補齊：確保 _INITIAL_WATCHLIST 裡的股票都在 watchlist 中
+        if "watchlist" in state:
+            existing_tickers = {w["ticker"] for w in state["watchlist"]}
+            added = []
+            for item in _INITIAL_WATCHLIST:
+                if item["ticker"] not in existing_tickers:
+                    state["watchlist"].append(dict(item))
+                    existing_tickers.add(item["ticker"])
+                    added.append(item["ticker"])
+            if added:
+                try:
+                    _STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), "utf-8")
+                    log.info(f"watchlist 自動補齊 {len(added)} 檔: {', '.join(added)}")
+                except OSError as e:
+                    log.error(f"watchlist 自動補齊寫入失敗: {e}")
 
         # 遷移：將舊的 DEFAULT + custom_stocks 合併為統一 watchlist
         if "watchlist" not in state:
