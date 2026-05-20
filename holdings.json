@@ -1,0 +1,55 @@
+{
+  "accounts": {
+    "小孩帳戶": {
+      "description": "小孩壓歲錢投資帳戶",
+      "total_cost_basis": 115442,
+      "strategy": "定期買進、長期持有",
+      "holdings": [
+        {
+          "ticker": "0050.TW",
+          "name": "元大台灣50",
+          "shares": 1185,
+          "avg_cost": 92.4,
+          "notes": "核心持股，占比95%"
+        },
+        {
+          "ticker": "00662.TW",
+          "name": "富邦NASDAQ",
+          "shares": 29,
+          "avg_cost": 117.2,
+          "notes": "美股曝險，建議提高至20-30%"
+        },
+        {
+          "ticker": "009816.TW",
+          "name": "凱基台灣TOP50",
+          "shares": 182,
+          "avg_cost": 13.4,
+          "notes": "不配息市值型，適合長期複利"
+        }
+      ]
+    },
+    "自己帳戶": {
+      "description": "個人小額投資帳戶",
+      "total_cost_basis": 3655,
+      "strategy": "定期定額，花城bot信號加減碼",
+      "holdings": [
+        {
+          "ticker": "009816.TW",
+          "name": "凱基台灣TOP50",
+          "shares": 274,
+          "avg_cost": 13.34,
+          "notes": "不配息、低費用、自動複利"
+        }
+      ]
+    }
+  },
+  "notes": {
+    "investment_rules": [
+      "資本額小，以定期定額為主，不做波段",
+      "花城bot三驗證信號僅作加減碼參考",
+      "Arena模擬跑滿90天且勝率>85%前不投入真錢做主動交易",
+      "小孩帳戶長期不動，新資金優先投009816+00662"
+    ]
+  },
+  "last_updated": "2026-05-20"
+}
