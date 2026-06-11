@@ -45,7 +45,13 @@ from watchlist import (
     check_spike_alert, check_volume_alert,
     build_spike_embed, build_volume_embed,
 )
-from market_data import fetch_market_sentiment, format_sentiment_block
+from market_data import fetch_market_sentiment, format_sentiment_block, fetch_us_futures
+from prediction_config import ENABLE_DAILY_REPORT
+from daily_report import (
+    build_premarket_embed, build_postclose_embed, build_midday_embed,
+    build_gemini_prompt_premarket, build_gemini_prompt_postclose,
+)
+from score_history import save_score_snapshot, load_score_history
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -1425,6 +1431,218 @@ async def before_greeting():
 
 
 # ---------------------------------------------------------------------------
+# 每日報告: 開盤前預報 (08:30) + 收盤後報告 (14:00)
+# ---------------------------------------------------------------------------
+@tasks.loop(time=[dt_time(hour=8, minute=30, tzinfo=_TW)])
+async def premarket_report_loop():
+    from datetime import datetime as _dt
+    now_tw = _dt.now(_TW)
+
+    # 跳過週末
+    if now_tw.weekday() >= 5:
+        log.info("premarket_report_loop: 週末跳過")
+        return
+    # 跳過台股假日
+    if now_tw.date() in TWSE_HOLIDAYS_2026:
+        log.info(f"premarket_report_loop: 休市日 {now_tw.date()} 跳過")
+        return
+
+    channel_id = _chat_channel_id or get_chat_channel()
+    if not channel_id:
+        log.warning("premarket_report_loop: 無聊天頻道，跳過")
+        return
+    channel = client.get_channel(channel_id)
+    if not channel:
+        log.warning(f"premarket_report_loop: 找不到頻道 {channel_id}")
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+        wl = get_watchlist()
+        tickers = [item["ticker"] for item in wl]
+
+        # 並行取得情緒 + 批次分析 + 美股期貨
+        sentiment_task = loop.run_in_executor(None, fetch_market_sentiment)
+        batch_task = loop.run_in_executor(
+            None, functools.partial(batch_quick_analysis, tickers)
+        )
+        futures_task = loop.run_in_executor(None, fetch_us_futures)
+        sentiment, batch, futures = await asyncio.gather(
+            sentiment_task, batch_task, futures_task
+        )
+
+        # Score 歷史
+        history = await loop.run_in_executor(
+            None, functools.partial(load_score_history, 7)
+        )
+        await loop.run_in_executor(
+            None, functools.partial(save_score_snapshot, wl, batch)
+        )
+
+        # 發送 Embed
+        embed = build_premarket_embed(
+            wl, batch, sentiment,
+            us_futures=futures, score_history=history,
+        )
+        await channel.send(embed=embed)
+        log.info("premarket_report_loop: Embed 已發送")
+
+        # Gemini AI 觀察（失敗不影響 Embed）
+        try:
+            if _genai_client:
+                prompt = build_gemini_prompt_premarket(sentiment, us_futures=futures)
+                text, sources = await loop.run_in_executor(
+                    None, functools.partial(_gemini_search, prompt)
+                )
+                if sources:
+                    text += "\n\n📎 **新聞來源**\n" + "\n".join(sources[:5])
+                if len(text) > 1900:
+                    text = text[:1900] + "..."
+                await channel.send(text)
+                log.info("premarket_report_loop: Gemini AI 觀察已發送")
+        except Exception as e:
+            log.warning(f"premarket_report_loop: Gemini 失敗（Embed 已發送）: {e}")
+
+    except Exception as e:
+        log.error(f"premarket_report_loop: 失敗: {e}")
+
+
+@premarket_report_loop.before_loop
+async def before_premarket():
+    await client.wait_until_ready()
+
+
+# ---------------------------------------------------------------------------
+# 盤中快閃 (10:30)
+# ---------------------------------------------------------------------------
+@tasks.loop(time=[dt_time(hour=10, minute=30, tzinfo=_TW)])
+async def midday_flash_loop():
+    from datetime import datetime as _dt
+    from daily_report import _classify_watchlist
+
+    now_tw = _dt.now(_TW)
+
+    if now_tw.weekday() >= 5:
+        log.info("midday_flash_loop: 週末跳過")
+        return
+    if now_tw.date() in TWSE_HOLIDAYS_2026:
+        log.info(f"midday_flash_loop: 休市日 {now_tw.date()} 跳過")
+        return
+
+    channel_id = _chat_channel_id or get_chat_channel()
+    if not channel_id:
+        log.warning("midday_flash_loop: 無聊天頻道，跳過")
+        return
+    channel = client.get_channel(channel_id)
+    if not channel:
+        log.warning(f"midday_flash_loop: 找不到頻道 {channel_id}")
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+        wl = get_watchlist()
+
+        # 只跑台股
+        tw_group, _ = _classify_watchlist(wl)
+        tw_tickers = [item["ticker"] for item in tw_group]
+        if not tw_tickers:
+            log.info("midday_flash_loop: 無台股 ticker，跳過")
+            return
+
+        batch = await loop.run_in_executor(
+            None, functools.partial(batch_quick_analysis, tw_tickers)
+        )
+        history = await loop.run_in_executor(
+            None, functools.partial(load_score_history, 7)
+        )
+
+        # build_midday_embed 需要完整 wl + batch 對齊台股部分
+        tw_wl = tw_group  # 只傳台股
+        embed = build_midday_embed(tw_wl, batch, score_history=history)
+        await channel.send(embed=embed)
+        log.info("midday_flash_loop: Embed 已發送")
+
+    except Exception as e:
+        log.error(f"midday_flash_loop: 失敗: {e}")
+
+
+@midday_flash_loop.before_loop
+async def before_midday():
+    await client.wait_until_ready()
+
+
+@tasks.loop(time=[dt_time(hour=14, minute=0, tzinfo=_TW)])
+async def postclose_report_loop():
+    from datetime import datetime as _dt
+    now_tw = _dt.now(_TW)
+
+    # 跳過週末
+    if now_tw.weekday() >= 5:
+        log.info("postclose_report_loop: 週末跳過")
+        return
+    # 跳過台股假日
+    if now_tw.date() in TWSE_HOLIDAYS_2026:
+        log.info(f"postclose_report_loop: 休市日 {now_tw.date()} 跳過")
+        return
+
+    channel_id = _chat_channel_id or get_chat_channel()
+    if not channel_id:
+        log.warning("postclose_report_loop: 無聊天頻道，跳過")
+        return
+    channel = client.get_channel(channel_id)
+    if not channel:
+        log.warning(f"postclose_report_loop: 找不到頻道 {channel_id}")
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+        wl = get_watchlist()
+        tickers = [item["ticker"] for item in wl]
+
+        sentiment_task = loop.run_in_executor(None, fetch_market_sentiment)
+        batch_task = loop.run_in_executor(
+            None, functools.partial(batch_quick_analysis, tickers)
+        )
+        sentiment, batch = await asyncio.gather(sentiment_task, batch_task)
+
+        # Score 歷史
+        history = await loop.run_in_executor(
+            None, functools.partial(load_score_history, 7)
+        )
+        await loop.run_in_executor(
+            None, functools.partial(save_score_snapshot, wl, batch)
+        )
+
+        embed = build_postclose_embed(wl, batch, sentiment, score_history=history)
+        await channel.send(embed=embed)
+        log.info("postclose_report_loop: Embed 已發送")
+
+        # Gemini AI 觀察
+        try:
+            if _genai_client:
+                prompt = build_gemini_prompt_postclose(sentiment)
+                text, sources = await loop.run_in_executor(
+                    None, functools.partial(_gemini_search, prompt)
+                )
+                if sources:
+                    text += "\n\n📎 **新聞來源**\n" + "\n".join(sources[:5])
+                if len(text) > 1900:
+                    text = text[:1900] + "..."
+                await channel.send(text)
+                log.info("postclose_report_loop: Gemini AI 觀察已發送")
+        except Exception as e:
+            log.warning(f"postclose_report_loop: Gemini 失敗（Embed 已發送）: {e}")
+
+    except Exception as e:
+        log.error(f"postclose_report_loop: 失敗: {e}")
+
+
+@postclose_report_loop.before_loop
+async def before_postclose():
+    await client.wait_until_ready()
+
+
+# ---------------------------------------------------------------------------
 # /setchat 指令 — 設定 AI 聊天頻道
 # ---------------------------------------------------------------------------
 @client.tree.command(name="setchat", description="設定此頻道為 AI 聊天 + 定時問安頻道")
@@ -2446,6 +2664,16 @@ async def on_ready():
             greeting_loop.start()
             log.info(f"on_ready: 自動恢復問安排程 (頻道 {saved_chat})")
 
+        # 每日報告排程
+        if ENABLE_DAILY_REPORT:
+            if not premarket_report_loop.is_running():
+                premarket_report_loop.start()
+            if not midday_flash_loop.is_running():
+                midday_flash_loop.start()
+            if not postclose_report_loop.is_running():
+                postclose_report_loop.start()
+            log.info("on_ready: 自動啟動每日報告排程 (08:30 + 10:30 + 14:00)")
+
     # 初始化 Arena 並啟動背景任務
     try:
         _arena.initialize()
@@ -2476,6 +2704,9 @@ bot_context = {
     "arena": _arena,
     "arena_loop": arena_loop,
     "arena_daily": arena_daily,
+    "premarket_report_loop": premarket_report_loop,
+    "midday_flash_loop": midday_flash_loop,
+    "postclose_report_loop": postclose_report_loop,
 }
 
 

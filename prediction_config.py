@@ -112,3 +112,8 @@ AGENT_GATE_TIMEOUT = _env_int("AGENT_GATE_TIMEOUT", 180)   # seconds
 AGENT_CACHE_TTL = _env_int("AGENT_CACHE_TTL", 14400)       # 4 hours
 AGENT_LLM_PROVIDER = _env_str("AGENT_LLM_PROVIDER", "google")
 AGENT_LLM_MODEL = _env_str("AGENT_LLM_MODEL", "gemini-2.5-flash-lite")
+
+# ---------------------------------------------------------------------------
+# Daily Report (開盤前預報 + 收盤後報告)
+# ---------------------------------------------------------------------------
+ENABLE_DAILY_REPORT = _env_bool("ENABLE_DAILY_REPORT", True)
