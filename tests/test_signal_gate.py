@@ -1,5 +1,5 @@
 """
-Tests for signal_gate.py — Triple Verification Gates
+Tests for signal_gate.py — Quad Verification Gates
 """
 
 import sys
@@ -247,17 +247,22 @@ class TestGateMacro:
 # Test: evaluate_entry — integration
 # ---------------------------------------------------------------------------
 class TestEvaluateEntry:
+    """Tests disable Gate 4 (agent consensus) to avoid 180s timeout."""
+
+    @patch("prediction_config.ENABLE_AGENT_GATE", False)
     def test_all_gates_pass_high_confidence(self):
         from signal_gate import evaluate_entry
         analysis = _make_analysis(score=70, rsi=50.0)
         signal = evaluate_entry(analysis, "0050.TW", vix=18.0, sentiment=None)
-        # Gate 1: score=70 >= 55(etf_tw), RSI=50 < 75, ADX=N/A(pass) → pass
+        # Gate 1: score=70 >= 45(etf_tw), RSI=50 < 75, ADX=N/A(pass) → pass
         # Gate 2: no featured_df → auto-pass
         # Gate 3: VIX=18 < 30 → pass
+        # Gate 4: disabled → auto-pass
         assert signal.confidence == "HIGH"
-        assert signal.gates_passed == 3
+        assert signal.gates_passed == 4
         assert signal.should_alert is True
 
+    @patch("prediction_config.ENABLE_AGENT_GATE", False)
     def test_low_score_not_high(self):
         from signal_gate import evaluate_entry
         analysis = _make_analysis(score=30, rsi=50.0)
@@ -266,30 +271,35 @@ class TestEvaluateEntry:
         assert signal.confidence != "HIGH"
         assert signal.should_alert is False
 
+    @patch("prediction_config.ENABLE_AGENT_GATE", False)
     def test_high_vix_reduces_confidence(self):
         from signal_gate import evaluate_entry
         analysis = _make_analysis(score=70, rsi=50.0)
         signal = evaluate_entry(analysis, "AAPL", vix=35.0, sentiment=None)
-        # Gate 3 fails (VIX too high)
-        assert signal.gates_passed <= 2
+        # Gate 3 fails (VIX too high), G1+G2+G4 pass = 3
+        assert signal.gates_passed == 3
+        assert signal.confidence == "MEDIUM"
         assert signal.should_alert is False
 
+    @patch("prediction_config.ENABLE_AGENT_GATE", False)
     def test_gates_passed_count(self):
         from signal_gate import evaluate_entry
         analysis = _make_analysis(score=40, rsi=80.0)
         signal = evaluate_entry(analysis, "2330.TW", vix=35.0, sentiment=None)
-        # Gate 1: score=40 < 60 → fail, RSI=80 > 75 → fail
+        # Gate 1: score=40 < 45 → fail, RSI=80 > 75 → fail
+        # Gate 2: auto-pass
         # Gate 3: VIX=35 > 30 → fail
-        # Only Gate 2 might pass (auto-pass)
-        assert signal.gates_passed <= 1
+        # Gate 4: disabled → auto-pass
+        assert signal.gates_passed == 2
         assert signal.confidence == "LOW"
 
-    def test_medium_confidence_two_gates(self):
+    @patch("prediction_config.ENABLE_AGENT_GATE", False)
+    def test_medium_confidence_three_gates(self):
         from signal_gate import evaluate_entry
-        # Gate 1 passes (score=70, rsi=50), Gate 2 auto-pass, Gate 3 fails (VIX=35)
+        # Gate 1 passes (score=70, rsi=50), Gate 2 auto-pass, Gate 3 fails (VIX=35), Gate 4 disabled auto-pass
         analysis = _make_analysis(score=70, rsi=50.0)
         signal = evaluate_entry(analysis, "0050.TW", vix=35.0, sentiment=None)
-        assert signal.gates_passed == 2
+        assert signal.gates_passed == 3
         assert signal.confidence == "MEDIUM"
         assert signal.should_alert is False
 

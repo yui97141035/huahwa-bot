@@ -478,6 +478,20 @@ def _build_predict_embed(result: dict) -> tuple[discord.Embed, discord.File]:
             sent_lines.append(f"{h_emoji} {title}")
         embed.add_field(name="📰 新聞情緒", value="\n".join(sent_lines), inline=False)
 
+    # 多代理分析（Gate 4）
+    agent = result.get("agent_analysis", {})
+    if agent.get("available"):
+        rating = agent.get("rating", "N/A")
+        summary = agent.get("summary", "分析中...")
+        # 截斷至 1024 字元（Discord embed field 限制）
+        if len(summary) > 1024:
+            summary = summary[:1021] + "..."
+        embed.add_field(
+            name=f"🤖 多代理分析 — {rating}",
+            value=summary if summary else "（無摘要）",
+            inline=False,
+        )
+
     pred_lines = [f"Day {i+1}: **${p:,.2f}**" for i, p in enumerate(preds)]
     embed.add_field(name=f"🔮 7 日預測 ({trend})", value="\n".join(pred_lines), inline=False)
 
@@ -944,7 +958,7 @@ async def monitor_loop():
     swing_pcts = []
     scanned = 0
 
-    # 取得 sentiment（用於三驗證 Gate 3）
+    # 取得 sentiment（用於四驗證 Gate 3）
     sentiment_data = None
     try:
         sentiment_data = await loop.run_in_executor(None, fetch_market_sentiment)
@@ -963,7 +977,7 @@ async def monitor_loop():
         vol_ratio = analysis["vol_ratio"]
         swing_pcts.append(change_pct)
 
-        # 三驗證進場評估（在 executor 跑，避免 C lib 與 asyncio 衝突）
+        # 四驗證進場評估（在 executor 跑，避免 C lib 與 asyncio 衝突）
         entry_signal = None
         try:
             from signal_gate import evaluate_entry
@@ -976,12 +990,12 @@ async def monitor_loop():
             )
             log.info(
                 f"monitor_loop: {item['ticker']} gate={entry_signal.confidence} "
-                f"({entry_signal.gates_passed}/3)"
+                f"({entry_signal.gates_passed}/4)"
             )
         except Exception as e:
             log.warning(f"monitor_loop: evaluate_entry failed for {item['ticker']}: {e}")
 
-        # 進場提醒（整合三驗證）
+        # 進場提醒（整合四驗證）
         if should_alert(item["ticker"], score, entry_signal=entry_signal):
             embed = build_alert_embed(item["ticker"], item["name"], analysis,
                                       entry_signal=entry_signal)

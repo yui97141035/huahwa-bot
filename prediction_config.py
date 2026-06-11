@@ -26,6 +26,10 @@ def _env_float(key: str, default: float) -> float:
     except ValueError:
         return default
 
+def _env_str(key: str, default: str) -> str:
+    val = os.environ.get(f"OPENCLAW_{key}", "").strip()
+    return val if val else default
+
 # ---------------------------------------------------------------------------
 # Phase 1A: Feature Engine
 # ---------------------------------------------------------------------------
@@ -99,3 +103,12 @@ GATE2_FORWARD_DAYS = _env_int("GATE2_FORWARD_DAYS", 5)      # 預測 N 天後漲
 # Gate 3: 總體環境
 GATE3_VIX_MAX = _env_float("GATE3_VIX_MAX", 30.0)
 GATE3_SENTIMENT_MIN = _env_float("GATE3_SENTIMENT_MIN", -0.3)
+
+# ---------------------------------------------------------------------------
+# Phase 3: Multi-Agent Consensus Gate (Gate 4)
+# ---------------------------------------------------------------------------
+ENABLE_AGENT_GATE = _env_bool("ENABLE_AGENT_GATE", True)
+AGENT_GATE_TIMEOUT = _env_int("AGENT_GATE_TIMEOUT", 180)   # seconds
+AGENT_CACHE_TTL = _env_int("AGENT_CACHE_TTL", 14400)       # 4 hours
+AGENT_LLM_PROVIDER = _env_str("AGENT_LLM_PROVIDER", "google")
+AGENT_LLM_MODEL = _env_str("AGENT_LLM_MODEL", "gemini-2.5-flash-lite")

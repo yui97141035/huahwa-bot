@@ -18,3 +18,5 @@ quantstats>=0.0.62     # Phase 1E: performance report
 # --- Phase 2: Triple Verification Gates (graceful fallback if missing) ---
 scikit-learn>=1.3      # Phase 2: ML utilities
 lightgbm>=4.0          # Phase 2: Gate 2 direction classifier
+# --- Phase 3: Multi-Agent Consensus Gate ---
+tradingagents @ file:///Users/yui/TradingAgents  # Phase 3: Gate 4 multi-agent debate

@@ -1,10 +1,11 @@
 """
-OpenClaw 三驗證進場訊號系統 (Triple Verification Gates)
+OpenClaw 四驗證進場訊號系統 (Quad Verification Gates)
 只在多個獨立訊號同時確認時才推送進場通知。
 
 Gate 1: 校準技術面 — 用校準後的閾值評估 score + RSI/ADX 濾波
 Gate 2: ML 方向分類 — LightGBM 預測未來 5 天方向
 Gate 3: 總體環境   — VIX + 大盤趨勢 + 新聞情緒
+Gate 4: 多代理共識 — TradingAgents 牛熊辯論 + 風險評估
 """
 
 import logging
@@ -47,8 +48,8 @@ class GateResult:
 @dataclass
 class EntrySignal:
     confidence: str      # "HIGH" | "MEDIUM" | "LOW"
-    gates_passed: int    # 0-3
-    gate_results: dict   # {"gate1": GateResult, "gate2": GateResult, "gate3": GateResult}
+    gates_passed: int    # 0-4
+    gate_results: dict   # {"gate1": ..., "gate2": ..., "gate3": ..., "gate4": ...}
     should_alert: bool   # only True when HIGH
 
 
@@ -349,26 +350,39 @@ def gate_macro(ticker: str, vix: float | None, sentiment: dict | None) -> GateRe
 
 
 # ---------------------------------------------------------------------------
-# 三驗證整合
+# 四驗證整合
 # ---------------------------------------------------------------------------
 def evaluate_entry(analysis: dict, ticker: str, vix: float | None = None,
                    sentiment: dict | None = None) -> EntrySignal:
-    """執行三道 Gate，回傳 EntrySignal。
+    """執行四道 Gate，回傳 EntrySignal。
 
     analysis: compute_analysis() 的回傳 dict（含 _featured_df）
     """
+    from prediction_config import ENABLE_AGENT_GATE
+
     category = classify_ticker(ticker)
 
     g1 = gate_technical(analysis, category)
     g2 = gate_ml_direction(analysis, ticker)
     g3 = gate_macro(ticker, vix, sentiment)
 
-    gate_results = {"gate1": g1, "gate2": g2, "gate3": g3}
+    # Gate 4: Multi-Agent Consensus
+    if ENABLE_AGENT_GATE:
+        try:
+            from agent_gate import gate_agent_consensus
+            g4 = gate_agent_consensus(analysis, ticker)
+        except Exception as e:
+            _log.warning(f"evaluate_entry({ticker}): Gate 4 error ({e}), auto-pass")
+            g4 = GateResult(passed=True, score=0.5, details=f"agent error (auto-pass)")
+    else:
+        g4 = GateResult(passed=True, score=0.5, details="disabled (auto-pass)")
+
+    gate_results = {"gate1": g1, "gate2": g2, "gate3": g3, "gate4": g4}
     gates_passed = sum(1 for g in gate_results.values() if g.passed)
 
-    if gates_passed == 3:
+    if gates_passed >= 4:
         confidence = "HIGH"
-    elif gates_passed == 2:
+    elif gates_passed >= 3:
         confidence = "MEDIUM"
     else:
         confidence = "LOW"
@@ -376,8 +390,8 @@ def evaluate_entry(analysis: dict, ticker: str, vix: float | None = None,
     should_alert = confidence == "HIGH"
 
     _log.info(
-        f"evaluate_entry({ticker}): {confidence} ({gates_passed}/3) — "
-        f"G1={g1.passed} G2={g2.passed} G3={g3.passed}"
+        f"evaluate_entry({ticker}): {confidence} ({gates_passed}/4) — "
+        f"G1={g1.passed} G2={g2.passed} G3={g3.passed} G4={g4.passed}"
     )
 
     return EntrySignal(

@@ -408,10 +408,15 @@ def build_alert_embed(ticker: str, name: str, analysis: dict,
                 inline=False,
             )
 
-    # 三驗證 Gate 狀態（若有）
+    # 四驗證 Gate 狀態（若有）
     if entry_signal:
         gate_lines = []
-        for gate_key, gate_label in [("gate1", "技術面"), ("gate2", "ML分類"), ("gate3", "總體環境")]:
+        for gate_key, gate_label in [
+            ("gate1", "技術面"),
+            ("gate2", "ML分類"),
+            ("gate3", "總體環境"),
+            ("gate4", "AI代理共識"),
+        ]:
             gr = entry_signal.gate_results.get(gate_key)
             if gr:
                 icon = "✅" if gr.passed else "❌"
@@ -420,7 +425,7 @@ def build_alert_embed(ticker: str, name: str, analysis: dict,
         if g2 and g2.score != 0.5:
             gate_lines.append(f"ML 預測機率: **{g2.score:.1%}**")
         embed.add_field(
-            name=f"🔒 三驗證 ({entry_signal.gates_passed}/3)",
+            name=f"🔒 四驗證 ({entry_signal.gates_passed}/4)",
             value="\n".join(gate_lines) if gate_lines else "N/A",
             inline=False,
         )

@@ -89,7 +89,7 @@ from prediction_config import (
     LSTM_INPUT_SIZE, LSTM_HIDDEN_SIZE, LSTM_DROPOUT,
     LSTM_LOOK_BACK, LSTM_PRED_DAYS, LSTM_MAX_EPOCHS, LSTM_PATIENCE, LSTM_LR,
     LSTM_GRAD_CLIP, LSTM_WARMUP_EPOCHS,
-    ENABLE_NHITS, ENABLE_SENTIMENT,
+    ENABLE_NHITS, ENABLE_SENTIMENT, ENABLE_AGENT_GATE,
 )
 
 # ---------------------------------------------------------------------------
@@ -921,6 +921,23 @@ def predict_stock(ticker: str) -> dict:
         except Exception as e:
             _log.warning(f"predict_stock({ticker}): sentiment 失敗 ({e})")
 
+    # --- Phase 3: Multi-Agent Consensus (Gate 4 pre-computation) ---
+    agent_analysis = {"available": False}
+    if ENABLE_AGENT_GATE:
+        try:
+            from agent_gate import gate_agent_consensus, get_agent_summary, get_agent_rating
+            g4 = gate_agent_consensus(analysis, ticker)
+            rating = get_agent_rating(ticker)
+            summary = get_agent_summary(ticker)
+            agent_analysis = {
+                "available": True,
+                "rating": rating or "Hold",
+                "summary": summary,
+                "gate_result": g4,
+            }
+        except Exception as e:
+            _log.warning(f"predict_stock({ticker}): agent analysis 失敗 ({e})")
+
     # 記錄預測
     try:
         log_prediction(ticker, float(close[-1]), predictions, val_mae_price)
@@ -938,6 +955,7 @@ def predict_stock(ticker: str) -> dict:
         "nhits_predictions": nhits_predictions,
         "ensemble_method": ensemble_method,
         "news_sentiment": news_sentiment,
+        "agent_analysis": agent_analysis,
         "chart_buf": chart_buf,
         "device_used": str(DEVICE),
         "analysis": analysis,

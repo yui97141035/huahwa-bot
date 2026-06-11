@@ -25,5 +25,8 @@
 - 不動的檔案: `ta_modules.py`, `market_data.py`, `arena.py`
 - 測試: 有改動就跑 `python3 -m pytest tests/ -v`
 - Phase 2 三驗證系統由 `ENABLE_TRIPLE_GATE` 控制，False 時回退到舊 score≥60 邏輯
-- `signal_gate.py` 的三道 Gate 各自有 fallback（LightGBM 不裝 → Gate2 auto-pass, VIX/情緒取不到 → 子條件 auto-pass）
-- 部署三驗證前必須先跑 `python3 gate_backtest.py` 確認準確率 > 70%
+- `signal_gate.py` 的四道 Gate 各自有 fallback（LightGBM 不裝 → Gate2 auto-pass, VIX/情緒取不到 → 子條件 auto-pass, TradingAgents 超時/錯誤 → Gate4 auto-pass）
+- Phase 3 Gate 4 由 `ENABLE_AGENT_GATE` 控制，False 或異常時 auto-pass
+- Gate 4 使用 ProcessPoolExecutor + 180s timeout，結果快取 4 小時
+- TradingAgents 安裝為 editable package（`pip install -e /Users/yui/TradingAgents`）
+- 部署四驗證前必須先跑 `python3 gate_backtest.py` 確認準確率 > 70%
