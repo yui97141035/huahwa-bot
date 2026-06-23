@@ -138,7 +138,7 @@ def generate_tearsheet_png() -> io.BytesIO | None:
         import matplotlib.pyplot as plt
 
         # QuantStats snapshot plot
-        fig = qs.plots.snapshot(returns, title="花城 Prediction Performance", show=False)
+        fig = qs.plots.snapshot(returns, title="HuaCheng Prediction Performance", show=False)
         if fig is None:
             # Some versions return None and create current figure
             fig = plt.gcf()

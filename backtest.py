@@ -160,8 +160,8 @@ class MomentumStrategy(Strategy):
 
 
 class HuaChengStrategy(Strategy):
-    name = "花城"
-    description = "花城評分 ≥60 買, <30 賣"
+    name = "HuaCheng"
+    description = "HuaCheng Score >=60 buy, <30 sell"
 
     def generate_signals(self, df: pd.DataFrame) -> pd.Series:
         signals = pd.Series(0, index=df.index)

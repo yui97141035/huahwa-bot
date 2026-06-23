@@ -1180,7 +1180,7 @@ def _draw_chart(ticker: str, dates, close: np.ndarray, predictions: list,
     ta_conf = ta.get("ta_confidence", 0)
     ta_conf_max = ta.get("ta_confidence_max", 40)
     ax_price.set_title(
-        f"{ticker.upper()} — 花城  |  Entry Score: {score}/100  [{verdict_en}]  TA: {ta_conf}/{ta_conf_max}",
+        f"{ticker.upper()} — HuaCheng  |  Entry Score: {score}/100  [{verdict_en}]  TA: {ta_conf}/{ta_conf_max}",
         fontsize=12,
     )
     ax_price.set_ylabel("Price")
