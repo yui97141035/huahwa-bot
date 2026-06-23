@@ -11,20 +11,25 @@ Rating mapping:
   Underweight -> passed=False, score=0.3
   Sell       -> passed=False, score=0.1
 
-使用 ProcessPoolExecutor + timeout 避免阻塞。
+使用 subprocess + timeout 避免 macOS spawn 問題。
 結果快取 4 小時 TTL。
 """
 
+import json
 import os
 import re
+import sys
+import subprocess
 import time as _time
 import logging
-from concurrent.futures import ProcessPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timezone, timedelta
 
 from signal_gate import GateResult
 
 _log = logging.getLogger("huacheng.agent_gate")
+
+# worker 腳本路徑
+_WORKER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_agent_worker.py")
 
 # ---------------------------------------------------------------------------
 # 快取
@@ -98,28 +103,6 @@ def _parse_summary(decision_text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Worker function (runs in subprocess)
-# ---------------------------------------------------------------------------
-def _run_agent_analysis(ticker: str, trade_date: str, config: dict) -> tuple[str, str]:
-    """在子程序中執行 TradingAgents 分析。
-
-    Returns: (final_trade_decision_text, signal_str)
-    """
-    # 確保子程序中也有 GOOGLE_API_KEY
-    gemini_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    if gemini_key:
-        os.environ["GOOGLE_API_KEY"] = gemini_key
-
-    from tradingagents.graph.trading_graph import TradingAgentsGraph
-
-    ta = TradingAgentsGraph(config=config)
-    final_state, signal = ta.propagate(ticker, trade_date)
-
-    decision_text = final_state.get("final_trade_decision", "")
-    return decision_text, signal
-
-
-# ---------------------------------------------------------------------------
 # 公開 API
 # ---------------------------------------------------------------------------
 def gate_agent_consensus(analysis: dict, ticker: str,
@@ -128,6 +111,7 @@ def gate_agent_consensus(analysis: dict, ticker: str,
 
     呼叫 TradingAgents 進行牛熊辯論+風險評估，
     解析最終 rating 產生 GateResult。
+    使用 subprocess 避免 macOS ProcessPoolExecutor spawn 問題。
     """
     from prediction_config import ENABLE_AGENT_GATE
 
@@ -163,12 +147,30 @@ def gate_agent_consensus(analysis: dict, ticker: str,
     })
 
     timeout = _get_timeout()
-    _log.info(f"agent_gate({ticker}): starting TradingAgents analysis (timeout={timeout}s)")
+    _log.info(f"agent_gate({ticker}): starting TradingAgents subprocess (timeout={timeout}s)")
 
     try:
-        with ProcessPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_run_agent_analysis, ticker, trade_date, config)
-            decision_text, signal = future.result(timeout=timeout)
+        payload = json.dumps({
+            "ticker": ticker,
+            "trade_date": trade_date,
+            "config": config,
+        })
+
+        proc = subprocess.run(
+            [sys.executable, _WORKER_SCRIPT],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env={**os.environ},
+        )
+
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip()[-500:] if proc.stderr else f"exit code {proc.returncode}")
+
+        result_data = json.loads(proc.stdout)
+        decision_text = result_data["decision_text"]
+        signal = result_data["signal"]
 
         rating = _parse_rating(decision_text)
         summary = _parse_summary(decision_text)
@@ -186,7 +188,7 @@ def gate_agent_consensus(analysis: dict, ticker: str,
         _log.info(f"agent_gate({ticker}): rating={rating}, passed={passed}, score={score}")
         return gate_result
 
-    except FuturesTimeoutError:
+    except subprocess.TimeoutExpired:
         _log.warning(f"agent_gate({ticker}): timeout after {timeout}s (auto-pass)")
         result = GateResult(passed=True, score=0.5, details=f"agent timeout {timeout}s (auto-pass)")
         _cache_set(ticker, result, "")
