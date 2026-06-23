@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw 1.30 — 股票監控清單 + 自動進場提醒
+花城 — 股票監控清單 + 自動進場提醒
 """
 
 import json
@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import discord
 
-log = logging.getLogger("openclaw.watchlist")
+log = logging.getLogger("huacheng.watchlist")
 
 # ---------------------------------------------------------------------------
 # 初始監控清單（僅首次啟動時使用，之後全部存在 watchlist.json）
@@ -22,11 +22,9 @@ _INITIAL_WATCHLIST: list[dict] = [
     {"input": "00878",  "ticker": "00878.TW", "name": "國泰永續高股息"},
     {"input": "00662",  "ticker": "00662.TW", "name": "富邦NASDAQ"},
     {"input": "006208", "ticker": "006208.TW","name": "富邦台50"},
+    {"input": "00929",  "ticker": "00929.TW", "name": "復華台灣科技優息"},
     {"input": "RGTI",   "ticker": "RGTI",     "name": "Rigetti Computing"},
     {"input": "IONQ",   "ticker": "IONQ",     "name": "IonQ"},
-    {"input": "QBTS",   "ticker": "QBTS",     "name": "D-Wave Quantum"},
-    {"input": "QUBT",   "ticker": "QUBT",     "name": "Quantum Computing"},
-    {"input": "QMCO",   "ticker": "QMCO",     "name": "Quantum Corp"},
     {"input": "2467",   "ticker": "2467.TW",  "name": "志聖工業"},
     {"input": "5443",   "ticker": "5443.TWO", "name": "均豪精密"},
     {"input": "6640",   "ticker": "6640.TWO", "name": "均華精密"},
@@ -430,7 +428,7 @@ def build_alert_embed(ticker: str, name: str, analysis: dict,
             inline=False,
         )
 
-    embed.set_footer(text="🦞 OpenClaw 自動監控 | 僅供參考，不構成投資建議")
+    embed.set_footer(text="🦋 花城 自動監控 | 僅供參考，不構成投資建議")
     return embed
 
 
@@ -536,7 +534,7 @@ def build_spike_embed(ticker: str, name: str, analysis: dict, direction: str) ->
                f"| 量比 {analysis['vol_ratio']:.1f}x | 評分 {analysis['total_score']}/100"),
         inline=False,
     )
-    embed.set_footer(text="🦞 OpenClaw 即時警報 | 僅供參考")
+    embed.set_footer(text="🦋 花城 即時警報 | 僅供參考")
     return embed
 
 
@@ -558,5 +556,5 @@ def build_volume_embed(ticker: str, name: str, analysis: dict) -> discord.Embed:
                f"| 評分 {analysis['total_score']}/100"),
         inline=False,
     )
-    embed.set_footer(text="🦞 OpenClaw 量能警報 | 僅供參考")
+    embed.set_footer(text="🦋 花城 量能警報 | 僅供參考")
     return embed

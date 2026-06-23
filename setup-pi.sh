@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup-pi.sh — Raspberry Pi 一鍵部署 OpenClaw Discord Bot
+# setup-pi.sh — Raspberry Pi 一鍵部署花城 Discord Bot
 # 用法: bash setup-pi.sh
 set -euo pipefail
 
@@ -103,7 +103,7 @@ fi
 # ── 完成 ──
 echo ""
 echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}  OpenClaw 部署完成！${NC}"
+echo -e "${GREEN}  花城 Bot 部署完成！${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
 echo "  下一步:"

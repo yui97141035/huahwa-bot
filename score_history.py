@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw — Score 歷史持久化
+花城 — Score 歷史持久化
 每日存檔各股 score，提供 delta 與連續趨勢計算。
 """
 
@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-_log = logging.getLogger("openclaw.score_history")
+_log = logging.getLogger("huacheng.score_history")
 _TW = timezone(timedelta(hours=8))
 _HISTORY_PATH = Path("score_history.json")
 _lock = threading.Lock()

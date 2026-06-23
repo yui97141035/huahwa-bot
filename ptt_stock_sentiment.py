@@ -10,7 +10,7 @@ import re
 import time as _time
 import logging
 
-_log = logging.getLogger("openclaw.ptt_sentiment")
+_log = logging.getLogger("huacheng.ptt_sentiment")
 
 # ---------------------------------------------------------------------------
 # 快取

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OpenClaw 自動部署腳本
+# 花城自動部署腳本
 # 用法: bash deploy.sh
 # GitHub webhook 或 GitHub Actions 觸發時自動執行
 

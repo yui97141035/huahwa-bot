@@ -1,4 +1,4 @@
-"""Bot A — OpenClaw Fusion（趨勢跟隨 + 多信號融合）。
+"""Bot A — 花城 Fusion（趨勢跟隨 + 多信號融合）。
 
 複用現有基礎設施：compute_analysis + predict_stock + 情緒 + TA Overlay。
 """
@@ -42,7 +42,7 @@ class EngineA(EngineBase):
 
     @property
     def name(self) -> str:
-        return "OpenClaw Fusion"
+        return "花城 Fusion"
 
     def decide(self, ticker: str, market: str) -> dict | None:
         try:

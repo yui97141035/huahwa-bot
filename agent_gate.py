@@ -24,7 +24,7 @@ from datetime import datetime, timezone, timedelta
 
 from signal_gate import GateResult
 
-_log = logging.getLogger("openclaw.agent_gate")
+_log = logging.getLogger("huacheng.agent_gate")
 
 # ---------------------------------------------------------------------------
 # 快取

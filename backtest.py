@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw 1.30 — 策略回測引擎
+花城 — 策略回測引擎
 可擴展的 Strategy 框架，內建 8 種策略，支援台股/美股交易成本模型。
 """
 
@@ -159,9 +159,9 @@ class MomentumStrategy(Strategy):
         return signals
 
 
-class OpenClawStrategy(Strategy):
-    name = "OpenClaw"
-    description = "OpenClaw 評分 ≥60 買, <30 賣"
+class HuaChengStrategy(Strategy):
+    name = "花城"
+    description = "花城評分 ≥60 買, <30 賣"
 
     def generate_signals(self, df: pd.DataFrame) -> pd.Series:
         signals = pd.Series(0, index=df.index)
@@ -177,7 +177,7 @@ class OpenClawStrategy(Strategy):
                 elif score < 30:
                     signals.iloc[i] = -1
             except Exception as e:
-                _log.debug(f"OpenClaw signal gen failed at bar {i}: {e}")
+                _log.debug(f"HuaCheng signal gen failed at bar {i}: {e}")
         return signals
 
 
@@ -350,7 +350,7 @@ STRATEGIES: dict[str, Strategy] = {
         RSI6Strategy(),
         MA3_100Strategy(),
         MomentumStrategy(),
-        OpenClawStrategy(),
+        HuaChengStrategy(),
         SRFlipStrategy(),
         PatternStrategy(),
         MAFilterStrategy(),
@@ -501,7 +501,7 @@ _CSV_COLUMNS = [
     "entry_date", "entry_price", "exit_date", "exit_price",
     "shares", "pnl", "cost", "return_pct",
 ]
-_log = logging.getLogger("openclaw.backtest")
+_log = logging.getLogger("huacheng.backtest")
 
 
 def save_trades_csv(result: "BacktestResult") -> int:

@@ -1,5 +1,5 @@
 """
-OpenClaw Sentiment Engine — FinBERT 新聞情緒分析
+花城 Sentiment Engine — FinBERT 新聞情緒分析
 使用 ProsusAI/finbert 模型分析 yfinance 新聞標題情緒。
 模型 lazy-load（首次呼叫 ~5s 載入，之後 ~300ms/batch）。
 import 或推理失敗 → 回傳 {"available": False}。
@@ -7,7 +7,7 @@ import 或推理失敗 → 回傳 {"available": False}。
 
 import logging
 
-_log = logging.getLogger("openclaw.sentiment")
+_log = logging.getLogger("huacheng.sentiment")
 
 # ---------------------------------------------------------------------------
 # Lazy-loaded model globals

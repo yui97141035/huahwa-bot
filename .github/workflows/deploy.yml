@@ -1,4 +1,4 @@
-name: Deploy OpenClaw
+name: Deploy 花城
 
 on:
   push:

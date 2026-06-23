@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw — 市場情緒數據源
+花城 — 市場情緒數據源
 提供 CNN 恐懼貪婪指數、VIX 波動率、台股加權指數，內建 TTL 快取。
 """
 
@@ -11,7 +11,7 @@ from typing import Any
 import requests
 import yfinance as yf
 
-_log = logging.getLogger("openclaw.market_data")
+_log = logging.getLogger("huacheng.market_data")
 
 # ---------------------------------------------------------------------------
 # TTL 快取

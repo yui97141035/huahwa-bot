@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw — 每日開盤前預報 + 收盤後報告
+花城 — 每日開盤前預報 + 收盤後報告
 提供 Discord Embed 建構 + Gemini prompt 生成。
 """
 
@@ -230,7 +230,7 @@ def build_premarket_embed(
     embed.add_field(name="\U0001f3af 進場候選 (score\u226545, RSI<70)", value=cand_text, inline=False)
     embed.add_field(name="\u26a0\ufe0f RSI 警報", value=rsi_text, inline=False)
 
-    embed.set_footer(text="OpenClaw Daily Report")
+    embed.set_footer(text="花城 Daily Report")
     return embed
 
 
@@ -278,7 +278,7 @@ def build_postclose_embed(
     embed.add_field(name="\U0001f3af 進場候選 (score\u226545, RSI<70)", value=cand_text, inline=False)
     embed.add_field(name="\u26a0\ufe0f RSI 警報", value=rsi_text, inline=False)
 
-    embed.set_footer(text="OpenClaw Daily Report")
+    embed.set_footer(text="花城 Daily Report")
     return embed
 
 
@@ -344,7 +344,7 @@ def build_midday_embed(
             inline=False,
         )
 
-    embed.set_footer(text="OpenClaw Midday Flash")
+    embed.set_footer(text="花城 Midday Flash")
     return embed
 
 

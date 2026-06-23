@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}OpenClaw Dashboard{% endblock %}</title>
+    <title>{% block title %}花城 Dashboard{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
@@ -11,7 +11,7 @@
 <body>
     <nav class="container-fluid">
         <ul>
-            <li><a href="/" class="brand">&#x1F99E; OpenClaw</a></li>
+            <li><a href="/" class="brand">&#x1F98B; 花城</a></li>
         </ul>
         <ul>
             {% if user %}
@@ -31,7 +31,7 @@
         {% block content %}{% endblock %}
     </main>
     <footer class="container">
-        <small>OpenClaw Dashboard &mdash; &#x1F99E; 小龍蝦管理面板</small>
+        <small>花城 Dashboard &mdash; &#x1F98B; 管理面板</small>
     </footer>
     <script src="/static/dashboard.js"></script>
 </body>

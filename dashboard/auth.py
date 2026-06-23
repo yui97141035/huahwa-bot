@@ -10,7 +10,7 @@ import logging
 import aiohttp
 from aiohttp import web
 
-log = logging.getLogger("openclaw.dashboard.auth")
+log = logging.getLogger("huacheng.dashboard.auth")
 
 _DISCORD_API = "https://discord.com/api/v10"
 _COOKIE_NAME = "oc_session"

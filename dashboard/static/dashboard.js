@@ -1,4 +1,4 @@
-/* OpenClaw Dashboard — HTMX config + confirm dialogs */
+/* 花城 Dashboard — HTMX config + confirm dialogs */
 
 document.addEventListener("DOMContentLoaded", function () {
     /* HTMX: add confirm dialog for destructive actions */

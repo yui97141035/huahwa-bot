@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenClaw 三驗證回測腳本 — Walk-forward 驗證準確率
+花城三驗證回測腳本 — Walk-forward 驗證準確率
 
 用法:
     python3 gate_backtest.py                  # 全部監控股票
@@ -19,7 +19,7 @@ import yfinance as yf
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 warnings.filterwarnings("ignore", category=FutureWarning)
-_log = logging.getLogger("openclaw.gate_backtest")
+_log = logging.getLogger("huacheng.gate_backtest")
 
 # LightGBM graceful fallback
 _HAS_LIGHTGBM = False

@@ -1,5 +1,5 @@
 """
-OpenClaw 1.30 — 八大進階技術分析模組
+花城 — 八大進階技術分析模組
 =============================================
 模組一：KLineSentiment       — K 線力道判斷
 模組二：MACrossFilter        — 均線優化過濾
@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-_log = logging.getLogger("openclaw.ta_modules")
+_log = logging.getLogger("huacheng.ta_modules")
 
 
 # ============================================================================

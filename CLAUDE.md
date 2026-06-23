@@ -1,4 +1,4 @@
-# OpenClaw (huahwa-bot) 開發規則
+# 花城 (huahwa-bot) 開發規則
 
 ## 已踩過的坑
 

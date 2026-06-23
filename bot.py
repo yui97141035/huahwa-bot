@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw 1.33 — Discord 股票預測機器人 + AI 聊天 + Arena 對抗交易
+花城 — Discord 股票預測機器人 + AI 聊天 + Arena 對抗交易
 指令: /predict | /predict_all | /watchlist | /monitor | /check | /setchat | /add | /remove | /setprompt | /setgreeting | /arena
 聊天: @機器人 或在指定頻道直接對話
 """
@@ -67,7 +67,7 @@ logging.basicConfig(
         ),
     ],
 )
-log = logging.getLogger("openclaw")
+log = logging.getLogger("huacheng")
 logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
 load_dotenv()
@@ -220,7 +220,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
-class OpenClawBot(discord.Client):
+class HuaChengBot(discord.Client):
     def __init__(self):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
@@ -229,7 +229,7 @@ class OpenClawBot(discord.Client):
         log.info("setup_hook: 準備同步指令...")
 
 
-client = OpenClawBot()
+client = HuaChengBot()
 
 # ---------------------------------------------------------------------------
 # 共用小工具
@@ -369,7 +369,7 @@ def _build_predict_embed(result: dict) -> tuple[discord.Embed, discord.File]:
     trend = "📈 上漲" if preds[-1] > result["last_price"] else "📉 下跌"
 
     embed = discord.Embed(
-        title=f"🦞 OpenClaw 1.32 — {result['ticker']}",
+        title=f"🦋 花城 1.32 — {result['ticker']}",
         description=f"## 進場評分: {a['total_score']}/100  {a['verdict']}",
         color=0x2ECC71 if a["total_score"] >= 60 else (0xF39C12 if a["total_score"] >= 45 else 0xE74C3C),
     )
@@ -593,7 +593,7 @@ def _build_accuracy_embed(result: dict, ticker: str | None) -> discord.Embed:
     """從 check_prediction_accuracy 結果建立 Embed。"""
     if not result["has_data"]:
         embed = discord.Embed(
-            title="🦞 OpenClaw 預測準確度",
+            title="🦋 花城 預測準確度",
             description=(
                 "📭 尚無可評分紀錄\n\n"
                 "請先使用 `/predict` 累積預測記錄，系統會在 **10 天後**自動對照實際價格。"
@@ -615,7 +615,7 @@ def _build_accuracy_embed(result: dict, ticker: str | None) -> discord.Embed:
 
     title_ticker = f" — {ticker.upper()}" if ticker else ""
     embed = discord.Embed(
-        title=f"🦞 OpenClaw 預測準確度{title_ticker}",
+        title=f"🦋 花城 預測準確度{title_ticker}",
         description=f"## 方向準確率: {dir_acc:.1f}%",
         color=color,
     )
@@ -677,7 +677,7 @@ def _build_accuracy_embed(result: dict, ticker: str | None) -> discord.Embed:
 # ---------------------------------------------------------------------------
 # /performance 指令 — QuantStats 績效報表
 # ---------------------------------------------------------------------------
-@client.tree.command(name="performance", description="查看 OpenClaw 預測績效報表（Sharpe/Drawdown）")
+@client.tree.command(name="performance", description="查看預測績效報表（Sharpe/Drawdown）")
 async def performance_command(interaction: discord.Interaction):
     log.info(f"/performance: user={interaction.user}")
     await interaction.response.defer(thinking=True)
@@ -701,7 +701,7 @@ async def performance_command(interaction: discord.Interaction):
             files.append(discord.File(chart_buf, filename="performance.png"))
 
         embed = discord.Embed(
-            title="🦞 OpenClaw 績效報表",
+            title="🦋 花城 績效報表",
             description=stats_text or "無法產出文字統計",
             color=0x3498DB,
         )
@@ -768,7 +768,7 @@ async def watchlist_command(interaction: discord.Interaction):
         )
 
     embed = discord.Embed(
-        title="🦞 OpenClaw 監控清單",
+        title="🦋 花城 監控清單",
         description=f"監控狀態: {status_text}\n\n" + "\n".join(lines),
         color=0x3498DB,
     )
@@ -869,7 +869,7 @@ async def check_command(interaction: discord.Interaction):
             alerts.append((item, analysis))
 
     embed = discord.Embed(
-        title="🦞 OpenClaw 即時掃描結果",
+        title="🦋 花城 即時掃描結果",
         description="\n".join(lines),
         color=0x3498DB,
     )
@@ -1231,7 +1231,7 @@ def _build_snapshot_embed(results: list[tuple], now_tw, sentiment: dict | None =
     color = 0x2ECC71 if high_count > 0 else 0x3498DB
 
     embed = discord.Embed(
-        title=f"🦞 盤勢快照 ({hour_str})",
+        title=f"🦋 盤勢快照 ({hour_str})",
         description="\n".join(desc_parts),
         color=color,
     )
@@ -2012,7 +2012,7 @@ def _build_single_backtest_embed(r) -> discord.Embed:
     color = 0x2ECC71 if r.total_return_pct > 0 else 0xE74C3C
 
     embed = discord.Embed(
-        title=f"🦞 回測結果 — {r.ticker} [{r.strategy_name}]",
+        title=f"🦋 回測結果 — {r.ticker} [{r.strategy_name}]",
         description=f"**{r.strategy_desc}**\n期間: {r.period} | 初始資金: ${r.initial_capital:,.0f}",
         color=color,
     )
@@ -2062,7 +2062,7 @@ def _build_single_backtest_embed(r) -> discord.Embed:
     else:
         embed.add_field(name="📋 Trades", value="此期間無交易訊號", inline=False)
 
-    embed.set_footer(text="🦞 OpenClaw Backtest | 僅供參考，不構成投資建議")
+    embed.set_footer(text="🦋 花城 Backtest | 僅供參考，不構成投資建議")
     return embed
 
 
@@ -2070,7 +2070,7 @@ def _build_comparison_embed(results: list) -> discord.Embed:
     """建立策略比較 Embed。"""
     ref = results[0]  # 已按 return% 排序
     embed = discord.Embed(
-        title=f"🦞 策略比較 — {ref.ticker}",
+        title=f"🦋 策略比較 — {ref.ticker}",
         description=f"期間: {ref.period} | 初始資金: ${ref.initial_capital:,.0f} | Buy & Hold: {ref.buy_hold_return_pct:+.2f}%",
         color=0x3498DB,
     )
@@ -2112,7 +2112,7 @@ def _build_comparison_embed(results: list) -> discord.Embed:
         inline=False,
     )
 
-    embed.set_footer(text="🦞 OpenClaw Backtest | 僅供參考，不構成投資建議")
+    embed.set_footer(text="🦋 花城 Backtest | 僅供參考，不構成投資建議")
     return embed
 
 
@@ -2157,7 +2157,7 @@ async def trades_command(
     filter_text = " | ".join(filters) if filters else "全部"
 
     embed = discord.Embed(
-        title="🦞 回測交易紀錄",
+        title="🦋 回測交易紀錄",
         description=f"篩選: {filter_text} | 顯示最新 {len(rows)} 筆",
         color=0x3498DB,
     )

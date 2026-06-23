@@ -1,5 +1,5 @@
 """
-OpenClaw Forecast Ensemble — N-HiTS 預測 + LSTM/N-HiTS 加權平均
+花城 Forecast Ensemble — N-HiTS 預測 + LSTM/N-HiTS 加權平均
 使用 NeuralForecast 框架訓練 N-HiTS 模型，與 LSTM 組合為 ensemble。
 import 失敗或訓練逾時 → 靜默回傳 None，讓 caller fallback 到純 LSTM。
 """
@@ -17,7 +17,7 @@ try:
 except RuntimeError:
     pass  # 已經被設定過（例如在 __main__ 中）
 
-_log = logging.getLogger("openclaw.forecast_ensemble")
+_log = logging.getLogger("huacheng.forecast_ensemble")
 
 # ---------------------------------------------------------------------------
 # NeuralForecast import（graceful fallback）

@@ -12,7 +12,7 @@ from aiohttp import web
 
 from . import auth as _auth
 
-log = logging.getLogger("openclaw.dashboard.routes")
+log = logging.getLogger("huacheng.dashboard.routes")
 
 
 def _render(request: web.Request, template_name: str, ctx: dict | None = None) -> web.Response:

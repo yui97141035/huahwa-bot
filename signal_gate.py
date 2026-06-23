@@ -1,5 +1,5 @@
 """
-OpenClaw 四驗證進場訊號系統 (Quad Verification Gates)
+花城四驗證進場訊號系統 (Quad Verification Gates)
 只在多個獨立訊號同時確認時才推送進場通知。
 
 Gate 1: 校準技術面 — 用校準後的閾值評估 score + RSI/ADX 濾波
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-_log = logging.getLogger("openclaw.signal_gate")
+_log = logging.getLogger("huacheng.signal_gate")
 
 # LightGBM lazy import（避免模組層級載入 C lib 導致 segfault）
 _HAS_LIGHTGBM = None  # None = 尚未嘗試, True/False = 結果

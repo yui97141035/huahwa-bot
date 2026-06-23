@@ -1,5 +1,5 @@
 """
-OpenClaw Feature Engine — 統一技術指標計算 + LSTM 特徵矩陣
+花城 Feature Engine — 統一技術指標計算 + LSTM 特徵矩陣
 使用 pandas-ta 計算 30+ 指標；import 失敗時 graceful fallback 到手寫計算。
 """
 
@@ -7,7 +7,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-_log = logging.getLogger("openclaw.feature_engine")
+_log = logging.getLogger("huacheng.feature_engine")
 
 # ---------------------------------------------------------------------------
 # pandas-ta import（graceful fallback）

@@ -1,5 +1,5 @@
 """
-OpenClaw Performance Report — QuantStats 績效報表
+花城 Performance Report — QuantStats 績效報表
 基於 predictions_log.csv 產出績效統計 + tearsheet PNG。
 import 失敗 → 回傳 None。
 """
@@ -13,7 +13,7 @@ from datetime import datetime, timezone, timedelta
 import numpy as np
 import pandas as pd
 
-_log = logging.getLogger("openclaw.perf_report")
+_log = logging.getLogger("huacheng.perf_report")
 
 _TW = timezone(timedelta(hours=8))
 _PRED_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "predictions_log.csv")
@@ -138,7 +138,7 @@ def generate_tearsheet_png() -> io.BytesIO | None:
         import matplotlib.pyplot as plt
 
         # QuantStats snapshot plot
-        fig = qs.plots.snapshot(returns, title="OpenClaw Prediction Performance", show=False)
+        fig = qs.plots.snapshot(returns, title="花城 Prediction Performance", show=False)
         if fig is None:
             # Some versions return None and create current figure
             fig = plt.gcf()
@@ -178,7 +178,7 @@ def generate_stats_text() -> str | None:
         avg_loss = qs.stats.avg_loss(returns)
 
         text = (
-            f"📊 **OpenClaw 預測績效報表**\n"
+            f"📊 **花城預測績效報表**\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"累積報酬: **{total_return:.2%}**\n"
             f"Sharpe Ratio: **{sharpe:.2f}**\n"

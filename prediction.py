@@ -1,5 +1,5 @@
 """
-小龍蝦 OpenClaw 1.32 — 股票趨勢預測 + 技術分析 + 進場評分模組
+花城 — 股票趨勢預測 + 技術分析 + 進場評分模組
 使用 LSTM 模型預測 + 多指標共振評分系統，支援 Apple MPS GPU 加速。
 v1.30: 新增八大進階技術分析模組（K線形態/均線過濾/支撐壓力/形態辨識/回測確認/訊號分級/避險過濾/獲利排序）
 
@@ -103,7 +103,7 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 DEVICE = get_device()
-_log = logging.getLogger("openclaw.prediction")
+_log = logging.getLogger("huacheng.prediction")
 
 # ---------------------------------------------------------------------------
 # 預測記錄
@@ -1180,7 +1180,7 @@ def _draw_chart(ticker: str, dates, close: np.ndarray, predictions: list,
     ta_conf = ta.get("ta_confidence", 0)
     ta_conf_max = ta.get("ta_confidence_max", 40)
     ax_price.set_title(
-        f"{ticker.upper()} — OpenClaw 1.32  |  Entry Score: {score}/100  [{verdict_en}]  TA: {ta_conf}/{ta_conf_max}",
+        f"{ticker.upper()} — 花城  |  Entry Score: {score}/100  [{verdict_en}]  TA: {ta_conf}/{ta_conf_max}",
         fontsize=12,
     )
     ax_price.set_ylabel("Price")
