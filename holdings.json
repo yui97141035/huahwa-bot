@@ -30,26 +30,127 @@
     },
     "自己帳戶": {
       "description": "個人小額投資帳戶",
-      "total_cost_basis": 3655,
-      "strategy": "定期定額，花城bot信號加減碼",
+      "total_cost_basis": 181504,
+      "strategy": "先養市值型、之後視情況轉高股息（2026-07-12起策略轉向，不再急著建立月配現金流）",
       "holdings": [
+        {
+          "ticker": "0056.TW",
+          "name": "元大高股息",
+          "shares": 1000,
+          "avg_cost": 53.15,
+          "notes": "原定湊滿3張衝7/21除息，已放棄追加，現有1張暫留，7/21除息後再決定去留"
+        },
+        {
+          "ticker": "00646.TW",
+          "name": "元大S&P500",
+          "shares": 1000,
+          "avg_cost": 75.85,
+          "notes": "2026-07-12策略轉向後新買，美股市值型，占新增部位比重83%（高於原建議60%）"
+        },
+        {
+          "ticker": "00878.TW",
+          "name": "國泰永續高股息",
+          "shares": 29,
+          "avg_cost": 32.78,
+          "notes": "既有小部位，未列入DCA目標"
+        },
+        {
+          "ticker": "00929.TW",
+          "name": "復華台灣科技優息",
+          "shares": 63,
+          "avg_cost": 30.82,
+          "notes": "既有小部位，月配底+科技股分散，不列入DCA目標"
+        },
         {
           "ticker": "009816.TW",
           "name": "凱基台灣TOP50",
-          "shares": 274,
-          "avg_cost": 13.34,
-          "notes": "不配息、低費用、自動複利"
+          "shares": 1000,
+          "avg_cost": 15.36,
+          "notes": "舊部位274股已於2026-07-07賣出補0056成本，此為2026-07-12後重新買進的新部位"
+        },
+        {
+          "ticker": "8064.TWO",
+          "name": "東捷（既有職員持股）",
+          "shares": 200,
+          "avg_cost": 170,
+          "notes": "既有部位，佔帳戶總成本約18.7%（隨帳戶擴大已降低，舊記錄82.8%已過時）"
         }
-      ]
+      ],
+      "totals_2026_07_16": {
+        "total_cost": 181504,
+        "total_market_value": 173128,
+        "total_pnl": -8840,
+        "total_pnl_pct": -4.87,
+        "source": "券商App截圖核對"
+      }
     }
+  },
+  "bank_accounts": {
+    "LINE Bank": {
+      "balance": 100000,
+      "notes": "85,000 從壽險解約金存入湊滿 10 萬（高利活存門檻）",
+      "updated": "2026-07"
+    },
+    "玉山銀行": {
+      "balance": 60000,
+      "notes": "壽險解約剩餘資金，活存",
+      "updated": "2026-07"
+    }
+  },
+  "insurance_surrender": {
+    "source": "小孩20年期壽險（金吉利）",
+    "status": "已解約",
+    "completed_date": "2026-06",
+    "insurance_details": {
+      "type": "20年期壽險（金吉利，買在小孩身上）",
+      "years_paid": 5,
+      "annual_premium": 36000,
+      "total_paid": 180000,
+      "surrender_value": 160000,
+      "loss_on_surrender": 20000
+    },
+    "fund_allocation": {
+      "received": 160000,
+      "bills_and_debts": -15000,
+      "net_available": 145000,
+      "to_line_bank": 85000,
+      "to_esun_bank": 60000,
+      "notes": "原計畫分批買00931B，實際先用於緩衝金建立"
+    }
+  },
+  "pending_legal": {
+    "status": "等待調解",
+    "description": "已申請調解委員會，尚未收到通知，調解後才有理賠",
+    "updated": "2026-07"
+  },
+  "original_investment_plan": {
+    "status": "暫緩",
+    "plan": {
+      "lump_sum": {
+        "amount": 150000,
+        "target": "00931B（統一美債20年）",
+        "method": "分5次進場，每月3萬",
+        "schedule": ["2026/06", "2026/07", "2026/08", "2026/09", "2026/10"],
+        "reason": "殖利率近20年高點，分批攤平不賭時機"
+      },
+      "monthly_dca": {
+        "amount": 3000,
+        "target": "009816.TW（凱基台灣TOP50）",
+        "source": "原本繳壽險的36000/年改投ETF",
+        "reason": "不配息自動複利，費用最低"
+      }
+    },
+    "notes": "解約金先用於建立緩衝金（LINE Bank 10萬 + 玉山 6萬），待調解理賠入帳後再評估投資計畫"
   },
   "notes": {
     "investment_rules": [
       "資本額小，以定期定額為主，不做波段",
       "花城bot三驗證信號僅作加減碼參考",
       "Arena模擬跑滿90天且勝率>85%前不投入真錢做主動交易",
-      "小孩帳戶長期不動，新資金優先投009816+00662"
+      "小孩帳戶長期不動，新資金優先投009816+00662",
+      "畢業緩衝金優先於任何投資（F檔規則）",
+      "月結餘翻正前不新增任何投資部位"
     ]
   },
-  "last_updated": "2026-05-20"
+  "last_updated": "2026-07-16"
 }

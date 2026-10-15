@@ -21,13 +21,9 @@ _INITIAL_WATCHLIST: list[dict] = [
     {"input": "0056",   "ticker": "0056.TW",  "name": "元大高股息"},
     {"input": "00878",  "ticker": "00878.TW", "name": "國泰永續高股息"},
     {"input": "00662",  "ticker": "00662.TW", "name": "富邦NASDAQ"},
-    {"input": "006208", "ticker": "006208.TW","name": "富邦台50"},
     {"input": "00929",  "ticker": "00929.TW", "name": "復華台灣科技優息"},
-    {"input": "RGTI",   "ticker": "RGTI",     "name": "Rigetti Computing"},
-    {"input": "IONQ",   "ticker": "IONQ",     "name": "IonQ"},
-    {"input": "2467",   "ticker": "2467.TW",  "name": "志聖工業"},
-    {"input": "5443",   "ticker": "5443.TWO", "name": "均豪精密"},
-    {"input": "6640",   "ticker": "6640.TWO", "name": "均華精密"},
+    {"input": "009816", "ticker": "009816.TW","name": "凱基台灣TOP50"},
+    {"input": "8064",   "ticker": "8064.TWO", "name": "東捷"},
 ]
 
 _STATE_PATH = Path("watchlist.json")
@@ -35,6 +31,15 @@ _COOLDOWN = timedelta(hours=24)
 _TW = timezone(timedelta(hours=8))
 _US_ET = ZoneInfo("America/New_York")
 _state_lock = threading.Lock()
+
+
+def _rsi_text(rsi: float) -> str:
+    """格式化 RSI 顯示文字，附白話註記給不熟技術指標的人看。"""
+    if rsi >= 70:
+        return f"RSI {rsi:.1f}(短期漲多/偏熱)"
+    elif rsi <= 30:
+        return f"RSI {rsi:.1f}(短期跌多/偏冷)"
+    return f"RSI {rsi:.1f}"
 
 # ---------------------------------------------------------------------------
 # 持久化狀態（thread-safe）
@@ -368,18 +373,22 @@ def build_alert_embed(ticker: str, name: str, analysis: dict,
         name="📊 關鍵數據",
         value=(
             f"收盤 **${analysis['current']:,.2f}** ({analysis['change_pct']:+.2f}%)\n"
-            f"RSI {analysis['rsi']:.1f} | MACD {analysis['macd']:.3f} | 量比 {analysis['vol_ratio']:.1f}x"
+            f"{_rsi_text(analysis['rsi'])} | MACD {analysis['macd']:.3f} | 量比 {analysis['vol_ratio']:.1f}x"
         ),
         inline=False,
     )
 
     scores = analysis["scores"]
     lines = []
-    for key, label in [("trend", "趨勢"), ("momentum", "動能"), ("macd", "MACD"),
-                        ("bollinger", "布林"), ("volume", "量能"), ("reversal", "反轉")]:
+    for key, label in [("trend", "趨勢"), ("momentum", "動能"), ("macd", "MACD(轉強/轉弱訊號)"),
+                        ("bollinger", "布林(股價區間位置)"), ("volume", "量能"), ("reversal", "反轉")]:
         s = scores[key]
         lines.append(f"**{label}** {s['score']}/{s['max']}　{s['detail']}")
-    embed.add_field(name="📋 六維評分", value="\n".join(lines), inline=False)
+    embed.add_field(
+        name="📋 六維評分",
+        value="\n".join(lines) + "\n\n_小辭典：金叉=轉強訊號、死叉=轉弱訊號、布林上/下軌=股價偏高/偏低的參考區間_",
+        inline=False,
+    )
 
     embed.add_field(
         name="💰 加碼判斷",
@@ -530,7 +539,7 @@ def build_spike_embed(ticker: str, name: str, analysis: dict, direction: str) ->
                           timestamp=datetime.now(timezone.utc))
     embed.add_field(
         name="📊 數據",
-        value=(f"現價 **${current:,.2f}** | RSI {analysis['rsi']:.1f} "
+        value=(f"現價 **${current:,.2f}** | {_rsi_text(analysis['rsi'])} "
                f"| 量比 {analysis['vol_ratio']:.1f}x | 評分 {analysis['total_score']}/100"),
         inline=False,
     )
@@ -552,7 +561,7 @@ def build_volume_embed(ticker: str, name: str, analysis: dict) -> discord.Embed:
     )
     embed.add_field(
         name="📊 數據",
-        value=(f"現價 **${current:,.2f}** ({change_pct:+.2f}%) | RSI {analysis['rsi']:.1f} "
+        value=(f"現價 **${current:,.2f}** ({change_pct:+.2f}%) | {_rsi_text(analysis['rsi'])} "
                f"| 評分 {analysis['total_score']}/100"),
         inline=False,
     )
