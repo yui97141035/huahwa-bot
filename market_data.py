@@ -253,7 +253,79 @@ def fetch_nasdaq() -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# 美股期貨 (ES=F / NQ=F)
+# 道瓊工業指數
+# ---------------------------------------------------------------------------
+_DOW_TTL = 600  # 10 min
+
+def fetch_dow() -> dict | None:
+    """取得道瓊工業指數 (^DJI)。"""
+    cached = _get_cached("dow", _DOW_TTL)
+    if cached is not None:
+        return cached
+
+    try:
+        ticker = yf.Ticker("^DJI")
+        hist = ticker.history(period="5d").dropna(subset=["Close"])
+        if hist.empty:
+            _log.warning("fetch_dow: no data")
+            return None
+
+        current = float(hist["Close"].iloc[-1])
+        prev = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else current
+        change_pct = (current - prev) / prev * 100 if prev != 0 else 0.0
+        arrow = "🔺" if change_pct >= 0 else "🔻"
+
+        result = {
+            "value": round(current, 2),
+            "change_pct": round(change_pct, 2),
+            "arrow": arrow,
+            "text": f"{arrow} {current:,.2f} ({change_pct:+.2f}%)",
+        }
+        return _set_cached("dow", result)
+
+    except Exception as e:
+        _log.warning(f"fetch_dow failed: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# 費城半導體指數（對台股半導體權值股最有領先意義的指標）
+# ---------------------------------------------------------------------------
+_SOX_TTL = 600  # 10 min
+
+def fetch_sox() -> dict | None:
+    """取得費城半導體指數 (^SOX)。"""
+    cached = _get_cached("sox", _SOX_TTL)
+    if cached is not None:
+        return cached
+
+    try:
+        ticker = yf.Ticker("^SOX")
+        hist = ticker.history(period="5d").dropna(subset=["Close"])
+        if hist.empty:
+            _log.warning("fetch_sox: no data")
+            return None
+
+        current = float(hist["Close"].iloc[-1])
+        prev = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else current
+        change_pct = (current - prev) / prev * 100 if prev != 0 else 0.0
+        arrow = "🔺" if change_pct >= 0 else "🔻"
+
+        result = {
+            "value": round(current, 2),
+            "change_pct": round(change_pct, 2),
+            "arrow": arrow,
+            "text": f"{arrow} {current:,.2f} ({change_pct:+.2f}%)",
+        }
+        return _set_cached("sox", result)
+
+    except Exception as e:
+        _log.warning(f"fetch_sox failed: {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
+# 美股期貨 (ES=F / NQ=F / YM=F)
 # ---------------------------------------------------------------------------
 _FUTURES_TTL = 600  # 10 min
 
@@ -289,10 +361,11 @@ def _fetch_single_future(symbol: str, cache_key: str) -> dict | None:
 
 
 def fetch_us_futures() -> dict:
-    """取得 S&P 500 期貨 (ES=F) + NASDAQ 期貨 (NQ=F)。"""
+    """取得 S&P 500 期貨 (ES=F) + NASDAQ 期貨 (NQ=F) + 道瓊期貨 (YM=F)。"""
     return {
         "sp500_futures": _fetch_single_future("ES=F", "es_futures"),
         "nasdaq_futures": _fetch_single_future("NQ=F", "nq_futures"),
+        "dow_futures": _fetch_single_future("YM=F", "ym_futures"),
     }
 
 
@@ -307,6 +380,8 @@ def fetch_market_sentiment() -> dict:
         "twii": fetch_twii(),
         "sp500": fetch_sp500(),
         "nasdaq": fetch_nasdaq(),
+        "dow": fetch_dow(),
+        "sox": fetch_sox(),
         "us_futures": fetch_us_futures(),
     }
 
@@ -335,16 +410,27 @@ def format_sentiment_block(sentiment: dict) -> str:
     if nasdaq:
         lines.append(f"**NASDAQ** {nasdaq['text']}")
 
+    dow = sentiment.get("dow")
+    if dow:
+        lines.append(f"**道瓊工業指數** {dow['text']}")
+
+    sox = sentiment.get("sox")
+    if sox:
+        lines.append(f"**費城半導體指數** {sox['text']}")
+
     # 美股期貨
     us_fut = sentiment.get("us_futures")
     if us_fut:
         sp_f = us_fut.get("sp500_futures")
         nq_f = us_fut.get("nasdaq_futures")
-        if sp_f or nq_f:
+        ym_f = us_fut.get("dow_futures")
+        if sp_f or nq_f or ym_f:
             lines.append("── 美股期貨 ──")
             if sp_f:
                 lines.append(f"**ES (S&P 500期)** {sp_f['text']}")
             if nq_f:
                 lines.append(f"**NQ (NASDAQ期)** {nq_f['text']}")
+            if ym_f:
+                lines.append(f"**YM (道瓊期)** {ym_f['text']}")
 
     return "\n".join(lines) if lines else "⚠️ 市場數據暫時無法取得"
