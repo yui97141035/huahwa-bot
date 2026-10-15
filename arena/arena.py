@@ -52,7 +52,8 @@ class Arena:
         self.broker_us = BrokerAlpaca()
         # 台股 Broker: 優先使用玉山真實交易，fallback 到模擬
         self._broker_esun = BrokerEsun()
-        self.broker_tw = self._broker_esun if self._broker_esun.is_connected else BrokerSim()
+        self._broker_sim = BrokerSim()
+        self.broker_tw = self._broker_esun if self._broker_esun.is_connected else self._broker_sim
         self._initialized = False
 
     def initialize(self) -> None:
@@ -67,7 +68,7 @@ class Arena:
                 self.broker_tw = self._broker_esun
                 _log.info("Arena: using BrokerEsun for TW market")
             else:
-                self.broker_tw = BrokerSim()
+                self.broker_tw = self._broker_sim
                 _log.info("Arena: BrokerEsun login failed, fallback to BrokerSim")
 
         self._initialized = True
@@ -76,7 +77,7 @@ class Arena:
     def switch_tw_broker(self, mode: str) -> str:
         """切換台股 broker 模式。mode: 'sim' | 'live' | 'esun'"""
         if mode == "sim":
-            self.broker_tw = BrokerSim()
+            self.broker_tw = self._broker_sim
             return "Switched to BrokerSim (模擬)"
         elif mode in ("live", "esun"):
             if self._broker_esun.is_connected:
@@ -91,6 +92,19 @@ class Arena:
 
     def _get_broker(self, market: str):
         return self.broker_us if market == "US" else self.broker_tw
+
+    def _broker_tag(self, broker) -> str:
+        """回傳實際下單的 broker 標籤，用來記錄在 position.broker。"""
+        return "esun" if broker is self._broker_esun else "sim"
+
+    def _get_sell_broker(self, position: dict):
+        """賣出時必須用開倉當時實際成交的 broker，避免把 Sim 開的紙上倉位丟給
+        真實的 Esun API 下單（那邊根本沒有對應庫存，只會一直下單失敗）。"""
+        if position["market"] != "TW":
+            return self.broker_us
+        if position.get("broker") == "esun" and self._broker_esun.is_connected:
+            return self._broker_esun
+        return self._broker_sim
 
     # ------------------------------------------------------------------
     # 核心交易迴圈
@@ -119,10 +133,11 @@ class Arena:
 
             # 先檢查現有持倉的止損
             for pos in db.get_open_positions(engine.bot_id):
-                broker = self._get_broker(pos["market"])
-                price = broker.get_price(pos["ticker"])
+                price_broker = self._get_broker(pos["market"])
+                price = price_broker.get_price(pos["ticker"])
                 if price and self.risk.check_stop_loss(engine.bot_id, pos, price):
-                    r = self._execute_sell(engine, pos, broker, price, "stop_loss")
+                    sell_broker = self._get_sell_broker(pos)
+                    r = self._execute_sell(engine, pos, sell_broker, price, "stop_loss")
                     if r:
                         results.append(r)
 
@@ -154,7 +169,8 @@ class Arena:
             if pos:
                 price = broker.get_price(ticker)
                 if price:
-                    return self._execute_sell(engine, pos, broker, price,
+                    sell_broker = self._get_sell_broker(pos)
+                    return self._execute_sell(engine, pos, sell_broker, price,
                                               decision.get("reason", "signal"))
         return None
 
@@ -187,6 +203,7 @@ class Arena:
         db.open_position(
             engine.bot_id, ticker, market,
             result["shares"], result["price"], stop_loss,
+            broker=self._broker_tag(broker),
         )
         db.record_trade(
             engine.bot_id, ticker, market, "buy",

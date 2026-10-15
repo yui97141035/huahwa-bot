@@ -55,7 +55,8 @@ def init_db() -> None:
             stop_loss   REAL,
             opened_at   TEXT NOT NULL,
             closed_at   TEXT,
-            status      TEXT NOT NULL DEFAULT 'open'  -- open / closed
+            status      TEXT NOT NULL DEFAULT 'open',  -- open / closed
+            broker      TEXT NOT NULL DEFAULT 'sim'  -- sim / esun：開倉當時實際成交的 broker
         );
         CREATE INDEX IF NOT EXISTS idx_positions_bot_status
             ON positions(bot_id, status);
@@ -118,6 +119,14 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_risk_bot ON risk_events(bot_id);
         """)
         c.commit()
+
+        # migration: 舊 DB 的 positions 表沒有 broker 欄位
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(positions)").fetchall()]
+        if "broker" not in cols:
+            c.execute("ALTER TABLE positions ADD COLUMN broker TEXT NOT NULL DEFAULT 'sim'")
+            c.commit()
+            _log.info("arena_db: migrated positions table, added broker column")
+
         c.close()
         _log.info("arena_db: schema initialized")
 
@@ -200,13 +209,14 @@ def set_cash(bot_id: str, cash: float) -> None:
 # ---------------------------------------------------------------------------
 
 def open_position(bot_id: str, ticker: str, market: str,
-                  shares: float, entry_price: float, stop_loss: float | None = None) -> int:
+                  shares: float, entry_price: float, stop_loss: float | None = None,
+                  broker: str = "sim") -> int:
     with _lock:
         c = _conn()
         cur = c.execute(
-            """INSERT INTO positions(bot_id, ticker, market, shares, entry_price, stop_loss, opened_at)
-               VALUES(?,?,?,?,?,?,?)""",
-            (bot_id, ticker, market, shares, entry_price, stop_loss, _now_tw()),
+            """INSERT INTO positions(bot_id, ticker, market, shares, entry_price, stop_loss, opened_at, broker)
+               VALUES(?,?,?,?,?,?,?,?)""",
+            (bot_id, ticker, market, shares, entry_price, stop_loss, _now_tw(), broker),
         )
         c.commit()
         row_id = cur.lastrowid
