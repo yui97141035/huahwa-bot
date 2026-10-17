@@ -18,6 +18,10 @@
 **場景**: pandas-ta 0.4.x 要求 Python 3.12+，在 3.11 上完全無法安裝。
 **教訓**: 所有可選依賴必須有 fallback 路徑，requirements.txt 用 environment marker（`; python_version>="3.12"`）限制。
 
+### 5. ProcessPoolExecutor 在 macOS spawn 模式下必失敗 (2026-10-17)
+**場景**: `forecast_ensemble.py` 用 `ProcessPoolExecutor` 跑 N-HiTS 訓練，worker 在 spawn 模式下會重新 import 啟動模組(bot.py)，觸發 "An attempt has been made to start a new process before the current process has finished its bootstrapping phase" 錯誤。自 2026-09-23 起每次呼叫必失敗（bot.log 累積 3373 次），因為有 try/except 靜默 fallback 到純 LSTM，完全沒被發現。`agent_gate.py` 其實已在 2026-06-23 (`cc89145`) 用 subprocess + 獨立 worker 腳本解決同一類問題，但沒有同步套用到 `forecast_ensemble.py`。
+**教訓**: 只要是從 `bot.py` 這個長駐進程衍生的子進程運算，**一律不要用 `ProcessPoolExecutor`**，改用 `subprocess.run()` + 獨立 worker 腳本（同 `_agent_worker.py` / `_nhits_worker.py` 模式）。修完一個模組的這類 bug 後，要主動搜尋還有沒有其他地方用同樣的壞 pattern（`grep -rn ProcessPoolExecutor`），不要只修眼前這一個。另外：NeuralForecast/pytorch_lightning 訓練時的 progress bar 會印到 stdout，若 worker 腳本用 stdout 傳回 JSON 結果，必須在建立模型時關閉 `enable_progress_bar=False, enable_model_summary=False, logger=False`，否則 JSON 會被訓練噪音污染導致 parse 失敗。
+
 ## 架構規則
 
 - 每個新元件都必須有 `try/except` + feature flag，失敗不影響現有功能
