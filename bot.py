@@ -1022,6 +1022,26 @@ async def monitor_loop():
             await channel.send(embed=embed)
             log.info(f"monitor_loop: 量能異常 {item['ticker']} vol_ratio={vol_ratio:.1f}x")
 
+    # 失敗重試：yfinance/網路偶發性 no data，等待後重試一次再判定為真的失敗
+    # （observed: 同一批全部失敗，下一輪 15 分鐘後 errors=0，屬於暫時性斷線，不需要立刻通報）
+    if errors:
+        failed_tickers = [e.split(":", 1)[0].strip() for e in errors]
+        log.info(f"monitor_loop: {len(failed_tickers)} 檔失敗，10 秒後重試一次: {failed_tickers}")
+        await asyncio.sleep(10)
+        retry_results = await loop.run_in_executor(
+            None, functools.partial(batch_quick_analysis, failed_tickers)
+        )
+        retry_map = {r.get("ticker", "").upper(): r for r in retry_results}
+        still_failed = [
+            f"{t}: {retry_map.get(t.upper(), {}).get('error', 'retry failed')}"
+            for t in failed_tickers
+            if retry_map.get(t.upper(), {}).get("analysis") is None
+        ]
+        recovered = len(errors) - len(still_failed)
+        if recovered:
+            log.info(f"monitor_loop: 重試後 {recovered} 檔恢復正常")
+        errors = still_failed
+
     # 更新監控模式
     new_mode = update_monitor_mode(vix_value, swing_pcts)
     log.info(f"monitor_loop [{now_str}]: 掃描完成 ({scanned} 檔, errors={len(errors)}, mode={new_mode})")
@@ -1030,7 +1050,7 @@ async def monitor_loop():
         detail = "\n".join(errors)
         log.warning(f"monitor_loop [{now_str}]: 失敗明細 — {detail}")
         await _report_error(
-            f"監控掃描 [{now_str}] — {len(errors)} 檔失敗",
+            f"監控掃描 [{now_str}] — {len(errors)} 檔失敗（已重試仍失敗）",
             detail,
         )
 
