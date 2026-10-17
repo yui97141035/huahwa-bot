@@ -13,7 +13,7 @@ from google.genai import types
 
 log = logging.getLogger("wp-poster.content")
 
-GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash-lite"]
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-3.5-flash-lite"]
 
 # Groq fallback（Llama 系列，免費額度大）
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")

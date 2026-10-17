@@ -53,7 +53,7 @@ log = logging.getLogger("video-pipeline")
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.5-flash-lite"]
 TTS_VOICE = "zh-CN-XiaoxiaoNeural"
 VIDEO_SIZE = (1920, 1080)
 VIDEO_FPS = 24

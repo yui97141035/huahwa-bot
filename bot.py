@@ -136,7 +136,7 @@ _DEFAULT_HUA_CHENG_PROMPT = (
 _HUA_CHENG_PROMPT = load_prompt() or _DEFAULT_HUA_CHENG_PROMPT
 
 # 模型優先順序：依序嘗試，配額滿自動降級
-_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-3.5-flash-lite"]
 
 _genai_client = None
 if GEMINI_API_KEY:
