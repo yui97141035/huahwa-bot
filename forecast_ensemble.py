@@ -4,20 +4,17 @@
 import 失敗或訓練逾時 → 靜默回傳 None，讓 caller fallback 到純 LSTM。
 """
 
+import json
 import logging
-import multiprocessing
+import os
+import subprocess
+import sys
+
 import numpy as np
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor, TimeoutError as FuturesTimeoutError
-
-# macOS + PyTorch: fork() 會複製 CUDA/MPS context 導致 crash，
-# 必須用 "spawn" 建立乾淨的子進程。
-try:
-    multiprocessing.set_start_method("spawn", force=False)
-except RuntimeError:
-    pass  # 已經被設定過（例如在 __main__ 中）
 
 _log = logging.getLogger("huacheng.forecast_ensemble")
+_WORKER_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_nhits_worker.py")
 
 # ---------------------------------------------------------------------------
 # NeuralForecast import（graceful fallback）
@@ -32,27 +29,16 @@ except ImportError:
     _log.warning("forecast_ensemble: neuralforecast not installed")
 
 
-def _nhits_train_predict(nf_df: pd.DataFrame, horizon: int, max_steps: int) -> list[float]:
-    """在子進程中執行 N-HiTS 訓練+預測（必須是 top-level function 才能被 pickle）。"""
-    from neuralforecast import NeuralForecast
-    from neuralforecast.models import NHITS
-    model = NHITS(
-        h=horizon,
-        input_size=30,
-        max_steps=max_steps,
-        scaler_type="standard",
-    )
-    nf = NeuralForecast(models=[model], freq="B")
-    nf.fit(df=nf_df)
-    forecast = nf.predict()
-    return forecast["NHITS"].values.tolist()
-
-
 def forecast_nhits(df: pd.DataFrame, horizon: int = 7) -> list[float] | None:
     """
     使用 N-HiTS 模型預測未來 horizon 天收盤價。
     df: 含 Close 欄位的 OHLCV DataFrame（index = DatetimeIndex）。
     回傳: list[float] 長度 = horizon，或 None（失敗時）。
+
+    訓練交給獨立子程序(_nhits_worker.py)執行，而不是 ProcessPoolExecutor：
+    macOS spawn 模式下 ProcessPoolExecutor 的 worker 會重新 import 啟動模組
+    (bot.py)，觸發 "bootstrap phase" 錯誤，導致 N-HiTS 永遠失敗
+    （同 agent_gate.py 用 subprocess 解決 TradingAgents 的方式一致）。
     """
     if not _HAS_NF:
         return None
@@ -62,30 +48,39 @@ def forecast_nhits(df: pd.DataFrame, horizon: int = 7) -> list[float] | None:
     try:
         # NeuralForecast 需要特定的 DataFrame 格式
         close = df["Close"].squeeze()
-        nf_df = pd.DataFrame({
-            "unique_id": "stock",
-            "ds": close.index,
-            "y": close.values.astype(float),
-        })
-        nf_df["ds"] = pd.to_datetime(nf_df["ds"])
+        ds = pd.to_datetime(close.index).strftime("%Y-%m-%d").tolist()
+        y = close.values.astype(float).tolist()
 
-        # 用 ProcessPoolExecutor + timeout 控制訓練時間
-        # ProcessPoolExecutor 可以在超時後真正終止 worker（ThreadPool 做不到）
-        with ProcessPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(
-                _nhits_train_predict, nf_df, horizon, NHITS_MAX_STEPS
-            )
-            try:
-                result = future.result(timeout=NHITS_TIMEOUT)
-                if len(result) == horizon:
-                    _log.info(f"forecast_nhits: success, {horizon} days predicted")
-                    return result
-                else:
-                    _log.warning(f"forecast_nhits: unexpected output length {len(result)}")
-                    return None
-            except FuturesTimeoutError:
-                _log.warning(f"forecast_nhits: timeout ({NHITS_TIMEOUT}s)")
-                return None
+        payload = json.dumps({
+            "ds": ds,
+            "y": y,
+            "horizon": horizon,
+            "max_steps": NHITS_MAX_STEPS,
+        })
+
+        proc = subprocess.run(
+            [sys.executable, _WORKER_SCRIPT],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=NHITS_TIMEOUT,
+            env={**os.environ},
+        )
+
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip()[-500:] if proc.stderr else f"exit code {proc.returncode}")
+
+        result = json.loads(proc.stdout)["predictions"]
+        if len(result) == horizon:
+            _log.info(f"forecast_nhits: success, {horizon} days predicted")
+            return result
+        else:
+            _log.warning(f"forecast_nhits: unexpected output length {len(result)}")
+            return None
+
+    except subprocess.TimeoutExpired:
+        _log.warning(f"forecast_nhits: timeout ({NHITS_TIMEOUT}s)")
+        return None
 
     except Exception as e:
         _log.warning(f"forecast_nhits: failed ({e})")
