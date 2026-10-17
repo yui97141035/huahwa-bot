@@ -165,7 +165,10 @@ def _yf_download(ticker: str, **kwargs) -> pd.DataFrame:
             with _yf_lock:
                 df = yf.download(ticker, **kwargs)
             if not df.empty:
-                return _flatten_yf_columns(df)
+                df = _flatten_yf_columns(df)
+                if "Close" in df.columns:
+                    df = df.dropna(subset=["Close"])
+                return df
         except Exception as e:
             msg = str(e)
             _log.warning(f"yf.download({ticker}) attempt {attempt+1} failed: {e}")
