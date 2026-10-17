@@ -45,6 +45,24 @@ def _score_indicator(score: int) -> str:
         return "🔴"
 
 
+_SCORE_LEGEND = "🟢75+強 🔵60+偏多 🟡45+中性 🟠30+偏弱 🔴30以下弱"
+
+
+def _rsi_hint(rsi: float) -> str:
+    """RSI 白話註記，給不熟技術指標的人看。"""
+    if rsi >= 70:
+        return "偏熱"
+    elif rsi <= 30:
+        return "偏冷"
+    return ""
+
+
+def _rsi_text(rsi: float) -> str:
+    """格式化 RSI 顯示文字，附白話註記。"""
+    hint = _rsi_hint(rsi)
+    return f"RSI:{rsi:.0f}({hint})" if hint else f"RSI:{rsi:.0f}"
+
+
 # ---------------------------------------------------------------------------
 # 排序格式化
 # ---------------------------------------------------------------------------
@@ -91,7 +109,7 @@ def _build_ranked_lines(
 
         lines.append(
             f"`{i:>2}.` {indicator} **{item['name']}** `{item['input']}` "
-            f"— {score}分{delta_text} RSI:{rsi:.0f} ({change:+.1f}%)"
+            f"— {score}分{delta_text} {_rsi_text(rsi)} ({change:+.1f}%)"
         )
 
     return "\n".join(lines) if lines else "_暫無資料_"
@@ -133,17 +151,17 @@ def _extract_signals(wl: list[dict], batch: list[dict]) -> tuple[str, str]:
         for item, analysis in candidates[:8]:
             score = analysis["total_score"]
             rsi = analysis.get("rsi", 0)
-            cand_lines.append(f"• **{item['name']}** `{item['input']}` — {score}分 RSI:{rsi:.0f}")
+            cand_lines.append(f"• **{item['name']}** `{item['input']}` — {score}分 {_rsi_text(rsi)}")
         cand_text = "\n".join(cand_lines)
     else:
         cand_text = "_目前無符合條件的候選_"
 
-    # RSI 警報
+    # RSI 警報（RSI 是判斷股價短期是否漲/跌過頭的指標：RSI>70 通常代表短期漲多、有拉回風險；RSI<30 代表短期跌多、可能超賣）
     alert_lines = []
     for item, rsi in overbought:
-        alert_lines.append(f"🔴 **{item['name']}** `{item['input']}` RSI {rsi:.0f} (超買)")
+        alert_lines.append(f"🔴 **{item['name']}** `{item['input']}` RSI {rsi:.0f} (短期漲多/偏熱)")
     for item, rsi in oversold:
-        alert_lines.append(f"🟢 **{item['name']}** `{item['input']}` RSI {rsi:.0f} (超賣)")
+        alert_lines.append(f"🟢 **{item['name']}** `{item['input']}` RSI {rsi:.0f} (短期跌多/偏冷)")
     rsi_text = "\n".join(alert_lines) if alert_lines else "_無 RSI 異常_"
 
     return cand_text, rsi_text
@@ -202,12 +220,15 @@ def build_premarket_embed(
     if us_futures:
         sp_f = us_futures.get("sp500_futures")
         nq_f = us_futures.get("nasdaq_futures")
-        if sp_f or nq_f:
+        ym_f = us_futures.get("dow_futures")
+        if sp_f or nq_f or ym_f:
             fut_lines = ["── 美股期貨 ──"]
             if sp_f:
                 fut_lines.append(f"**ES (S&P 500期)** {sp_f['text']}")
             if nq_f:
                 fut_lines.append(f"**NQ (NASDAQ期)** {nq_f['text']}")
+            if ym_f:
+                fut_lines.append(f"**YM (道瓊期)** {ym_f['text']}")
             desc_lines.append("\n".join(fut_lines))
 
     embed = discord.Embed(
@@ -219,7 +240,7 @@ def build_premarket_embed(
 
     # 台股技術評分
     tw_text = _build_ranked_lines(tw_group, batch, wl, max_items=15, score_history=score_history)
-    embed.add_field(name="\U0001f1f9\U0001f1fc 台股技術評分", value=tw_text, inline=False)
+    embed.add_field(name=f"\U0001f1f9\U0001f1fc 台股技術評分（{_SCORE_LEGEND}）", value=tw_text, inline=False)
 
     # 美股技術評分
     us_text = _build_ranked_lines(us_group, batch, wl, max_items=10, score_history=score_history)
@@ -227,10 +248,10 @@ def build_premarket_embed(
 
     # 進場候選 + RSI 警報
     cand_text, rsi_text = _extract_signals(wl, batch)
-    embed.add_field(name="\U0001f3af 進場候選 (score\u226545, RSI<70)", value=cand_text, inline=False)
-    embed.add_field(name="\u26a0\ufe0f RSI 警報", value=rsi_text, inline=False)
+    embed.add_field(name="\U0001f3af 值得留意的標的", value=cand_text, inline=False)
+    embed.add_field(name="\u26a0\ufe0f RSI 警報（短期漲跌是否過頭）", value=rsi_text, inline=False)
 
-    embed.set_footer(text="花城 Daily Report")
+    embed.set_footer(text="花城 Daily Report ・「值得留意」= 綜合分數45分以上且短期未過熱")
     return embed
 
 
@@ -263,7 +284,7 @@ def build_postclose_embed(
 
     # 台股排名
     tw_text = _build_ranked_lines(tw_group, batch, wl, max_items=15, score_history=score_history)
-    embed.add_field(name="\U0001f1f9\U0001f1fc 台股排名", value=tw_text, inline=False)
+    embed.add_field(name=f"\U0001f1f9\U0001f1fc 台股排名（{_SCORE_LEGEND}）", value=tw_text, inline=False)
 
     # 今日最大波動 top 3
     movers_text = _extract_biggest_movers(wl, batch)
@@ -275,10 +296,10 @@ def build_postclose_embed(
 
     # 進場候選 + RSI 警報
     cand_text, rsi_text = _extract_signals(wl, batch)
-    embed.add_field(name="\U0001f3af 進場候選 (score\u226545, RSI<70)", value=cand_text, inline=False)
-    embed.add_field(name="\u26a0\ufe0f RSI 警報", value=rsi_text, inline=False)
+    embed.add_field(name="\U0001f3af 值得留意的標的", value=cand_text, inline=False)
+    embed.add_field(name="\u26a0\ufe0f RSI 警報（短期漲跌是否過頭）", value=rsi_text, inline=False)
 
-    embed.set_footer(text="花城 Daily Report")
+    embed.set_footer(text="花城 Daily Report ・「值得留意」= 綜合分數45分以上且短期未過熱")
     return embed
 
 
