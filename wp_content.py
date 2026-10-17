@@ -13,7 +13,7 @@ from google.genai import types
 
 log = logging.getLogger("wp-poster.content")
 
-GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash-lite"]
 
 # Groq fallback（Llama 系列，免費額度大）
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -176,9 +176,12 @@ class ContentGenerator:
                 err_str = str(e)
                 if "429" in err_str or "quota" in err_str.lower():
                     log.warning(f"Gemini {model_name} 配額超限，嘗試下一個")
-                    continue
-                raise
-        log.warning(f"Gemini 全部 429，嘗試 fallback")
+                elif "404" in err_str or "NOT_FOUND" in err_str or "no longer available" in err_str.lower():
+                    log.warning(f"Gemini {model_name} 已下線，嘗試下一個")
+                else:
+                    log.warning(f"Gemini {model_name} 失敗（{type(e).__name__}），嘗試下一個: {e}")
+                continue
+        log.warning(f"Gemini 全部模型失敗，交給 Groq/OpenRouter fallback")
         return last_err
 
     @staticmethod
@@ -325,6 +328,33 @@ class ContentGenerator:
                     break
             if not text.endswith("⋯⋯"):
                 text += "⋯⋯"
+        return text
+
+    def generate_threads_caption(self, ep_content: str) -> str:
+        """用 Gemini 產生 Threads 貼文文案（比 FB 更口語、更像真人碎念/爆料的鉤子）。"""
+        prompt = (
+            "你是一位很會經營 Threads 帳號的小編，帳號調性是分享匿名真實故事。\n"
+            "以下是一篇連載小說的內容。請寫一段適合發在 Threads 上的開頭文案。\n\n"
+            "【規則】\n"
+            "1. 寫 1~2 句話，總長度約 20~45 個中文字，比 Facebook 文案更短更直接\n"
+            "2. 語氣：像朋友傳訊息爆料、或匿名版主開場白，第一人稱或直接開門見山最好\n"
+            "3. 可以用一句挑釁、震驚、或矛盾的話當開頭去吸引點擊（例如反差感強的陳述句），"
+            "但不要用制式的「你敢相信嗎」「太扯了」這種爛梗開場\n"
+            "4. 不要劇透結局，只丟出一個讓人好奇「後來呢」的鉤子\n"
+            "5. 不要用書封文案式的華麗詞藻，要像真人隨手打的貼文\n"
+            "6. 直接輸出文案文字，不要加引號、不要加 hashtag、不要加表情符號\n\n"
+            f"【小說內容】\n{ep_content[:800]}\n"
+        )
+        config = types.GenerateContentConfig(
+            temperature=0.9, max_output_tokens=200,
+        )
+        text = self._call_gemini(config, prompt)
+        text = text.strip().strip('"「」""')
+        if text and text[-1] not in "。！？⋯…":
+            for i in range(len(text) - 1, -1, -1):
+                if text[i] in "。！？⋯…，":
+                    text = text[:i + 1]
+                    break
         return text
 
     def generate_teaser(self, current_ep_content: str,

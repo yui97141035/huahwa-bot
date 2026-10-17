@@ -132,12 +132,15 @@ class Database:
             (wp_post_id, episode_id),
         )
 
-    def mark_wp_draft(self, episode_id: int, wp_post_id: int, fb_teaser: str = ""):
+    def mark_wp_draft(self, episode_id: int, wp_post_id: int, fb_teaser: str = "",
+                       threads_caption: str = ""):
         """標記為已存到 WordPress 草稿，等待排程發布。"""
         self._ensure_fb_teaser_column()
+        self._ensure_threads_caption_column()
         self._retry_execute(
-            "UPDATE episodes SET status = 'wp_draft', wp_post_id = ?, fb_teaser = ? WHERE id = ?",
-            (wp_post_id, fb_teaser, episode_id),
+            "UPDATE episodes SET status = 'wp_draft', wp_post_id = ?, fb_teaser = ?, "
+            "threads_caption = ? WHERE id = ?",
+            (wp_post_id, fb_teaser, threads_caption, episode_id),
         )
 
     def _ensure_fb_teaser_column(self):
@@ -148,6 +151,15 @@ class Database:
             self._conn.execute("ALTER TABLE episodes ADD COLUMN fb_teaser TEXT DEFAULT ''")
             self._conn.commit()
             log.info("已新增 fb_teaser 欄位")
+
+    def _ensure_threads_caption_column(self):
+        """確保 threads_caption 欄位存在（向後相容）。"""
+        try:
+            self._conn.execute("SELECT threads_caption FROM episodes LIMIT 0")
+        except sqlite3.OperationalError:
+            self._conn.execute("ALTER TABLE episodes ADD COLUMN threads_caption TEXT DEFAULT ''")
+            self._conn.commit()
+            log.info("已新增 threads_caption 欄位")
 
     def get_next_wp_draft(self) -> dict | None:
         """取得下一篇 wp_draft 狀態的集數。"""

@@ -18,6 +18,7 @@ from wp_scraper import PTTScraper
 from wp_content import ContentGenerator
 from wp_publisher import WordPressPublisher
 from wp_facebook import FacebookPublisher
+from wp_threads import ThreadsPublisher
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -68,6 +69,10 @@ class Config:
     FB_APP_ID = os.getenv("FB_APP_ID", "")
     FB_APP_SECRET = os.getenv("FB_APP_SECRET", "")
 
+    # Threads（選填，此站專用帳號，與喵小仙 Threads 完全獨立）
+    THREADS_USER_ID = os.getenv("THREADS_USER_ID", "")
+    THREADS_ACCESS_TOKEN = os.getenv("THREADS_ACCESS_TOKEN", "")
+
     # Discord 通知
     DISCORD_TOKEN = os.getenv("DISCORD_TOKEN", "")
     DISCORD_OWNER_ID = os.getenv("DISCORD_OWNER_ID", "")
@@ -112,15 +117,25 @@ class WPPoster:
             password=Config.WP_PASSWORD,
         )
         self.fb: FacebookPublisher | None = None
+        self._fb_publisher: FacebookPublisher | None = None  # 保留實例供重試
         if Config.FB_PAGE_ACCESS_TOKEN and Config.FB_PAGE_ID:
-            self.fb = FacebookPublisher(
+            self._fb_publisher = FacebookPublisher(
                 page_access_token=Config.FB_PAGE_ACCESS_TOKEN,
                 page_id=Config.FB_PAGE_ID,
                 app_id=Config.FB_APP_ID,
                 app_secret=Config.FB_APP_SECRET,
             )
+        self.threads: ThreadsPublisher | None = None
+        self._threads_publisher: ThreadsPublisher | None = None  # 保留實例供重試
+        if Config.THREADS_USER_ID and Config.THREADS_ACCESS_TOKEN:
+            self._threads_publisher = ThreadsPublisher(
+                user_id=Config.THREADS_USER_ID,
+                access_token=Config.THREADS_ACCESS_TOKEN,
+            )
         self._last_scrape_date: str | None = None
         self._last_token_check_date: str | None = None
+        self._fb_last_retry: datetime | None = None
+        self._threads_last_retry: datetime | None = None
 
     def _get_last_publish_time(self) -> datetime | None:
         """從資料庫查詢最後一次發布時間，避免重啟時重複發文。"""
@@ -147,15 +162,28 @@ class WPPoster:
             log.error("WordPress 連線失敗，請檢查設定")
             return
 
-        if self.fb:
-            if self.fb.test_connection():
+        if self._fb_publisher:
+            if self._fb_publisher.test_connection():
+                self.fb = self._fb_publisher
                 log.info("Facebook 同步已啟用")
                 self._check_fb_token()
             else:
-                log.warning("Facebook 連線失敗，將不會同步到 FB")
+                log.warning("Facebook 連線失敗，稍後將自動重試")
                 self.fb = None
+                self._fb_last_retry = datetime.now()
         else:
             log.info("未設定 Facebook 憑證，FB 同步停用")
+
+        if self._threads_publisher:
+            if self._threads_publisher.test_connection():
+                self.threads = self._threads_publisher
+                log.info("Threads 同步已啟用")
+            else:
+                log.warning("Threads 連線失敗，稍後將自動重試")
+                self.threads = None
+                self._threads_last_retry = datetime.now()
+        else:
+            log.info("未設定 Threads 憑證，Threads 同步停用")
 
         draft_count = self.db.count_drafts()
         wp_draft_count = self.db.count_wp_drafts()
@@ -176,6 +204,14 @@ class WPPoster:
                 if self.fb and self._should_check_token(now):
                     self._check_fb_token()
                     self._last_token_check_date = now.strftime("%Y-%m-%d")
+
+                # 每小時嘗試重連 Facebook（如果之前失敗）
+                if not self.fb and self._fb_publisher:
+                    self._try_reconnect_fb(now)
+
+                # 每小時嘗試重連 Threads（如果之前失敗）
+                if not self.threads and self._threads_publisher:
+                    self._try_reconnect_threads(now)
 
                 # 檢查是否該補充草稿
                 if self._should_scrape(now):
@@ -286,6 +322,31 @@ class WPPoster:
 
         log.info(f"本次產生 {generated} 集草稿，佇列現有 {self.db.count_drafts()} 篇")
 
+    def _try_reconnect_fb(self, now: datetime):
+        """每小時嘗試重連 Facebook（上次失敗時不永久放棄）。"""
+        if self._fb_last_retry and (now - self._fb_last_retry) < timedelta(hours=1):
+            return
+        self._fb_last_retry = now
+        log.info("嘗試重新連線 Facebook...")
+        if self._fb_publisher.test_connection():
+            self.fb = self._fb_publisher
+            log.info("Facebook 重新連線成功！同步已恢復")
+            self._check_fb_token()
+        else:
+            log.warning("Facebook 重新連線失敗，1 小時後再試")
+
+    def _try_reconnect_threads(self, now: datetime):
+        """每小時嘗試重連 Threads（上次失敗時不永久放棄）。"""
+        if self._threads_last_retry and (now - self._threads_last_retry) < timedelta(hours=1):
+            return
+        self._threads_last_retry = now
+        log.info("嘗試重新連線 Threads...")
+        if self._threads_publisher.test_connection():
+            self.threads = self._threads_publisher
+            log.info("Threads 重新連線成功！同步已恢復")
+        else:
+            log.warning("Threads 重新連線失敗，1 小時後再試")
+
     def _should_check_token(self, now: datetime) -> bool:
         """每天檢查一次 FB token。"""
         today = now.strftime("%Y-%m-%d")
@@ -375,6 +436,15 @@ class WPPoster:
                 except Exception as e:
                     log.warning(f"產生 FB 摘要失敗: {e}")
 
+            # 產生 Threads 文案（獨立語氣，不是 FB 文案的重複利用）
+            threads_caption = ""
+            if self.threads or self._threads_publisher:
+                try:
+                    threads_caption = self.generator.generate_threads_caption(draft["content"])
+                    log.info(f"Threads 文案已產生: {threads_caption[:50]}...")
+                except Exception as e:
+                    log.warning(f"產生 Threads 文案失敗: {e}")
+
             try:
                 wp_post_id = self.publisher.create_draft(
                     title=title,
@@ -384,7 +454,7 @@ class WPPoster:
                     next_episode_title=next_title,
                     next_episode_teaser=next_teaser,
                 )
-                self.db.mark_wp_draft(draft["id"], wp_post_id, fb_teaser)
+                self.db.mark_wp_draft(draft["id"], wp_post_id, fb_teaser, threads_caption)
                 log.info(f"草稿已同步到 WP: {title} (WP ID={wp_post_id})")
             except Exception as e:
                 log.error(f"同步草稿到 WP 失敗: {title} — {e}")
@@ -417,14 +487,37 @@ class WPPoster:
                 post_url = permalink or f"https://mnnuyenn.art.blog/?p={wp_post_id}"
                 teaser = draft.get("fb_teaser") or ""
                 if not teaser:
-                    teaser = draft["content"][:100].rsplit("，", 1)[0] + "⋯⋯"
+                    teaser = self._fallback_teaser(draft["content"])
                 fb_message = f"{title}\n{teaser}\n{post_url}"
                 self.fb.share_post(post_url, fb_message)
+
+            # Threads 同步（第二帳號，若已設定）
+            if self.threads:
+                post_url = permalink or f"https://mnnuyenn.art.blog/?p={wp_post_id}"
+                threads_caption = draft.get("threads_caption") or draft.get("fb_teaser") or ""
+                if not threads_caption:
+                    threads_caption = self._fallback_teaser(draft["content"])
+                threads_message = f"{title}\n{threads_caption}\n{post_url}"
+                self.threads.post_text(threads_message)
 
         except Exception as e:
             error_msg = str(e)
             self.db.mark_failed(draft["id"], error_msg)
             log.error(f"發布失敗: {title} — {error_msg}")
+
+    @staticmethod
+    def _fallback_teaser(content: str, limit: int = 100) -> str:
+        """AI 摘要全部失敗時的保底文案：優先找完整句尾（。！？），避免斷在句子中間。"""
+        snippet = content[:limit]
+        for punct in ("。", "！", "？"):
+            idx = snippet.rfind(punct)
+            if idx > limit * 0.4:  # 至少要有點內容，不要斷太早
+                return snippet[:idx + 1] + "⋯⋯"
+        # 找不到完整句尾，退而求其次找逗號
+        idx = snippet.rfind("，")
+        if idx > limit * 0.4:
+            return snippet[:idx] + "⋯⋯"
+        return snippet + "⋯⋯"
 
 
 # ---------------------------------------------------------------------------
